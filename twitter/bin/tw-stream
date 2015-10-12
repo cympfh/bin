@@ -1,0 +1,7 @@
+#!/bin/sh
+
+twurl -t -A 'Accept-Encoding: text' -H userstream.twitter.com /1.1/user.json 2>/dev/null |
+grep --line-buffered '^{' |
+jq -r 'if has("text") then "\u001b[33m\(.user.name) \u001b[91m@\(.user.screen_name) \u001b[37m\(.id_str) \u001b[34mvia \(.source)\n  \u001b[30m\(.text)\u001b[0m" else "" end'
+#awk '{gsub(/<[^>]*>/, "", $0); gsub("&lt;", "<", $0); gsub("&gt;", ">", $0); print $0; fflush()}'
+#sed -u 's/<[^>]*>//g' | sed -u 's/&lt;/</g' | sed -u 's/&gt;/>/g'

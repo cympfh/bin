@@ -1,0 +1,5 @@
+#!/bin/bash
+
+twurl -X GET /1.1/statuses/home_timeline.json?count=199 |
+jq -r 'reverse | .[] | "\u001b[33m\(.user.name) \u001b[91m@\(.user.screen_name) \u001b[37m\(.id_str) \u001b[34mvia \(.source)\n  \u001b[30m\(.text)\u001b[0m"' |
+sed -e 's/<[^>]*>//g' -e 's/&lt;/</g' -e 's/&gt;/>/g'

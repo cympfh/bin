@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ -n "$1" ]; then
+  msg=$1
+else
+  read msg
+  while read line; do
+    msg="$msg\n$line"
+  done
+fi
+twurl -X POST "/1.1/statuses/update.json" -d "status=$msg"

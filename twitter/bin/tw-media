@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+  echo "[usage] tw-media [text] image_path"
+  exit 0
+fi
+
+TEXT=$1
+IMG=$2
+
+if [ $# == 1 ]; then
+  TEXT=''
+  IMG=$1
+fi
+
+twurl -X POST "/1.1/statuses/update_with_media.json" --file "$IMG" --file-field 'media[]' -d "status=$TEXT"

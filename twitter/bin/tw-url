@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+  echo "[usage] tw-url [text] image_url"
+  exit 0
+fi
+
+TEXT=$1
+URL=$2
+
+if [ $# == 1 ]; then
+  TEXT=''
+  URL=$1
+fi
+
+LOC="/tmp/${URL##*/}"
+wget --quiet -O $LOC  $URL
+twurl -X POST "/1.1/statuses/update_with_media.json" --file $LOC --file-field "media[]" -d "status=$TEXT"

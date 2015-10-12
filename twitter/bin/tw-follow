@@ -1,0 +1,10 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+  echo "[usage] tw-follow screen_name"
+  exit 0
+fi
+
+NAME=$1
+URL=/1.1/friendships/create.json
+twurl -X POST $URL -d "screen_name=$NAME"
