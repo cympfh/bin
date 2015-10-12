@@ -1,0 +1,8 @@
+#!/usr/bin/env coffee
+
+fs = require 'fs'
+fn = '/tmp/w.json'
+fs.exists fn, (bl) ->
+  if bl
+    w = require fn
+    console.log w.weather[0].description

@@ -1,0 +1,23 @@
+#!/bin/bash
+
+URL=$1
+OUT=/tmp/list.html
+
+curl -s $URL | nkf >/tmp/source
+
+cat << EOM > $OUT
+<style>
+img { width: 100%; }
+</style>
+<body>
+EOM
+
+cat /tmp/source | grep -o 'ttp[^ ]*jpg'|sed 's/^ttp/http/g' |
+grep -v blog-imgs |
+grep -v blogimgs\.jp |
+grep -v jump\.2ch |
+sed 's/.*/<img src=&>/g' >> $OUT
+
+echo file://$OUT
+
+echo last: `cat /tmp/source | grep -o '<dt>[0-9]*' | tail -1 | sed 's/<dt>//g'`

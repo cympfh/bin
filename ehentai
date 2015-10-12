@@ -1,0 +1,68 @@
+#!/usr/bin/env coffee
+# vim: set ft=coffee:
+
+cheerio = require 'cheerio'
+http    = require 'http'
+url     = process.argv[2]
+prefix  = process.argv[3] or './'
+
+unless url
+  console.warn '''usage: ehentai url [prefix]
+  ex) ehentai http://g.e-hentai.org/g/614162/1303d485a2/'''
+  process.exit 0
+
+id = url.split('/')[4]
+
+## 画像の固有ページのリンクを集めるめう
+
+dfs = (root) ->
+  q = [root]
+  ret = []
+  keyword = "/#{id}-"
+  while q.length > 0
+    dom = q.shift()
+    if (dom.type is 'tag') and (dom.name is 'a') and dom.attribs?.href?
+      href = dom.attribs.href
+      ret .push href if href.indexOf(keyword) > 0
+    if dom.children?
+      q.push c for c in dom.children
+  ret
+
+iter = (page, ac, cont) ->
+  console.warn '@' + page
+  page_url = url + (if page is 0 then '' else "?p=#{page}")
+  http.get page_url, (req) ->
+    data = ''
+    req.on 'data', (frag) -> data += frag
+    req.on 'end', ->
+      $ = cheerio.load data
+      n = ac.length
+      addition = dfs $._root
+      for a in addition
+        ac .push a if not (a in ac)
+      if n < ac.length
+        iter (page + 1), ac, cont
+      else
+        cont ac
+
+## 画像の固有ページから画像のurlを見つけるめう
+image_url = (img_page, ret) ->
+  http.get img_page, (req) ->
+    data = ''
+    req.on 'data', (frag) -> data += frag
+    req.on 'end', ->
+      $ = cheerio.load data
+      src = $('#img').attr('src')
+      console.warn src
+      ret src
+
+## ここがエントリーポイントめう
+do ->
+  iter 0, [], (pages) ->
+    n = pages.length
+    iter2 = (idx) ->
+      return if idx >= n
+      image_url pages[idx], (url) ->
+        console.log url
+        iter2 idx + 1
+    iter2 0

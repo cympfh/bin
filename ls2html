@@ -1,0 +1,73 @@
+#!/bin/sh
+
+cat << EOM
+<head>
+<style>
+div.STAGE {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+img#IMAGE{
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+div.OP {
+  width: 20%;
+  height: 100%;
+  opacity: 0.3;
+  position: absolute;
+  top: 0;
+}
+div#BACK { left: 0; }
+div#FORW { right: 0; }
+</style>
+</head>
+<body>
+<div class="STAGE">
+  <img id="IMAGE" />
+</div>
+<div class="OP" id="BACK"></div>
+<div class="OP" id="FORW"></div>
+<script>
+var ls = [
+EOM
+
+while read a; do
+  echo \"$a\",
+done
+
+cat << EOM
+];
+var cur = 0;
+var base = location.href;
+if (location.hash != "") {
+  cur = location.hash.split("#")[1] | 0;
+  base = location.href.replace(location.hash, '');
+}
+function dis() {
+  IMAGE.src = ls[cur];
+  var next = new Image();
+  next.src = ls[(cur+1)%ls.length];
+  location.href = base + "#" + cur;
+}
+BACK.onclick = function() {
+  cur = (cur + ls.length - 1) % ls.length;
+  dis();
+  BACK.style.backgroundColor = 'white';
+  setTimeout(function() {
+    BACK.style.backgroundColor = '';
+  }, 400);
+};
+FORW.onclick = function() {
+  cur = (cur + 1) % ls.length;
+  dis();
+  FORW.style.backgroundColor = 'white';
+  setTimeout(function() {
+    FORW.style.backgroundColor = '';
+  }, 400);
+};
+dis();
+</script>
+EOM

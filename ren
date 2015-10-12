@@ -1,0 +1,30 @@
+#!/bin/bash
+
+if [ $# = 0 ]; then
+  echo 'usage: % <file>'
+  exit 0
+fi
+
+MD5=md5
+which md5sum > /dev/null && MD5=md5sum
+
+for TARGET in $@; do
+
+  EXT=${TARGET##*.}
+
+  which md5sum > /dev/null
+  if [ $? = 0 ]; then
+    HASH=`md5sum "$TARGET" | cut -d ' ' -f1`
+  else
+    HASH=`md5 "$TARGET" |awk '{print $NF}'`
+  fi
+
+  if [ "_${EXT}" = "_${TARGET}" ]; then # no extension?
+    echo ${HASH}
+    mv "$TARGET" ${HASH}
+  else
+    echo ${HASH}.${EXT}
+    mv "$TARGET" ${HASH}.${EXT}
+  fi
+
+done

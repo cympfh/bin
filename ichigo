@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# name of the board (perfect match)
+BDNAME='ニュー速VIP'
+
+# name of the thread (perfect match)
+THNAME='苺ましまろ'
+
+# get board url ('http://viper.2ch.net/news4vip')
+BD=`curl -s http://menu.2ch.net/bbsmenu.html | nkf | grep ">${BDNAME}<" | sed 's/^.*HREF=\([^>]*\).*$/\1/'`
+## BD=http://viper.2ch.net/news4vip/
+
+DOM=`echo $BD | cut -d '/' -f 3` ## viper.2ch.net
+BID=`echo $BD | cut -d '/' -f 4` ## news4vip
+
+TID=`curl -s ${BD}/subject.txt | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1`
+## TID=1435961267
+
+# get thread text
+# echo http://${DOM}/test/read.cgi/${BID}/${TID}
+curl -s http://${DOM}/test/read.cgi/${BID}/${TID} |
+grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
