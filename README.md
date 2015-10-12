@@ -1,0 +1,5 @@
+- jq
+- peco
+- ponde
+- svm_classify
+- svm_learn
