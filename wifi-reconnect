@@ -1,0 +1,4 @@
+#!/bin/sh
+
+sudo /etc/init.d/networking restart
+sudo /etc/init.d/network-manager restart

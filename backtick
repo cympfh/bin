@@ -1,8 +1,6 @@
-#!/usr/bin/env coffee
+#!/bin/bash
 
-fs = require 'fs'
-fn = '/tmp/w.json'
-fs.exists fn, (bl) ->
-  if bl
-    w = require fn
-    console.log w.weather[0].description
+export LANG=en_US.UTF-8
+tenki=`~/bin/tenki`
+echo -e "\005{= y}`whoami` \005{= R}  \005{= b}$tenki"
+
