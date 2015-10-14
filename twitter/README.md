@@ -22,8 +22,15 @@
 引数が与えられなかった場合、標準入力から read する
 
 ```bash
-tw 'hogehoge'
-date | tw
+$ tw hoge hoge # post "hoge hoge"
+$ date | tw # post $(date)
+```
+
+```bash
+$ tw
+a b
+c  d
+^D # post "a b\nc  d"
 ```
 
 ### vim からツイートする
