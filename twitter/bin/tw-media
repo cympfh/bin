@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-  echo "[usage] tw-media [text] image_path"
+  echo "Usage tw-media [ <text> ] <url or path of image>"
   exit 0
 fi
 
@@ -13,4 +13,14 @@ if [ $# == 1 ]; then
   IMG=$1
 fi
 
-twurl -X POST "/1.1/statuses/update_with_media.json" --file "$IMG" --file-field 'media[]' -d "status=$TEXT"
+case $IMG in
+  http*)
+    LOC="/tmp/${IMG##*/}"
+    wget --quiet -O $LOC $IMG
+    ;;
+  *)
+    LOC=$IMG
+    ;;
+esac
+
+twurl -X POST "/1.1/statuses/update_with_media.json" --file "$LOC" --file-field 'media[]' -d "status=$TEXT"
