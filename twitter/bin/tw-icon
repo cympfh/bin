@@ -1,0 +1,18 @@
+#!/bin/bash
+
+if [ $# -lt 1 ]; then
+  echo "Usage: tw-icon <url or path of image>"
+  exit 0
+fi
+
+case $1 in
+  http*)
+    LOC="/tmp/${1##*/}"
+    wget --quiet -O $LOC $1
+    ;;
+  *)
+    LOC=$1
+    ;;
+esac
+
+twurl -X POST -d image=$( cat $LOC |base64 -w0 ) "/1.1/account/update_profile_image.json"
