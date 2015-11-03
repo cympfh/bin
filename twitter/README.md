@@ -18,12 +18,9 @@
 
 ## ツイートする: `tw`
 
-1引数を取ってテキストとしてツイートする  
-引数が与えられなかった場合、標準入力から read する
-
 ```bash
 $ tw hoge hoge # post "hoge hoge"
-$ date | tw # post $(date)
+$ date | tw # post $(date) と同じ
 ```
 
 ```bash
@@ -50,20 +47,19 @@ rlwrap sh -c 'while read a; do tw "$a"; done'
 一行入力する度にツイートするコマンド  
 終了は Ctrl-D とか
 
-## 画像つきでツイートする: `tw-media` `tw-url`
+## 画像つきでツイートする: `tw-media`
 
 ### tw-media
-ローカルにある画像つきでツイートする
+画像つきでツイートする
 
 ```bash
-tw-media 'てきすと' '画像のパス'
+tw-media 'てきすと' '画像のURLまたはパス'
 ```
 
-### tw-url
-画像のurlを指定して画像付きでツイートする
+テキストは省略可能
 
 ```bash
-tw-media 'てきすと' '画像のURL'
+tw-media '画像のパス'
 ```
 
 `/tmp/` に `wget` で一回保存してるだけなので,
