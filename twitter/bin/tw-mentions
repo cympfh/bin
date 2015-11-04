@@ -1,4 +1,4 @@
 #!/bin/bash
 
 twurl -X GET /1.1/statuses/mentions_timeline.json?count=199 |
-jq -r 'reverse | .[] | "\u001b[33m\(.user.name) \u001b[91m@\(.user.screen_name) \u001b[37m\(.id_str)\n  \u001b[30m\(.text)\u001b[0m"'
+jq -r 'reverse | .[] | "\u001b[33m\(.user.name) \u001b[91m@\(.user.screen_name) \u001b[37m\(.id_str)\n \u001b[0m \(.text)"'

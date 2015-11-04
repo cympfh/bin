@@ -1,4 +1,4 @@
 #!/bin/bash
 
 twurl -X GET /1.1/direct_messages.json?count=199 |
-jq -r 'reverse | .[] | "\u001b[33m\(.sender.name) \u001b[91m@\(.sender.screen_name) \u001b[37m\(.id_str)\n  \u001b[30m\(.text)\u001b[0m"'
+jq -r 'reverse | .[] | "\u001b[33m\(.sender.name) \u001b[91m@\(.sender.screen_name) \u001b[37m\(.id_str)\n \u001b[0m \(.text)"'
