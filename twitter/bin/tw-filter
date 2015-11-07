@@ -1,7 +1,12 @@
 #!/bin/sh
 
+if [ $# -eq 0 ]; then
+  echo "tw-filter <track query>"
+  exit 0
+fi
+
 while :; do
-twurl -t -A 'Accept-Encoding: text' -H userstream.twitter.com /1.1/user.json 2>/dev/null |
+twurl -t -d track=$1 -A 'Accept-Encoding: text' -H userstream.twitter.com /1.1/statuses/filter.json 2>/dev/null |
 grep --line-buffered '^{' |
 jq -r 'if has("text") then "\u001b[33m\(.user.name) \u001b[91m@\(.user.screen_name) \u001b[37m\(.id_str)\n \u001b[0m \(.text)" else "" end'
 sleep 1
