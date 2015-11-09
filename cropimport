@@ -1,2 +1,3 @@
 #!/bin/bash
-gnome-screenshot -f /home/cympfh/Pictures/hoge.jpg -a
+
+import -density 2000 -depth 900 ~/Pictures/hoge.jpg
