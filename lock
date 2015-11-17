@@ -7,6 +7,5 @@ IMAGE=/tmp/i3lock.png
 MASCOT=$(dirname $0)/img/azusa.png
 
 scrot $IMAGE
-convert $IMAGE -gaussian-blur 2x2 -colors 10 - | composite -gravity southeast $MASCOT - $IMAGE
-#convert $IMAGE -gaussian-blur 10x10  - | composite -gravity southeast $MASCOT - $IMAGE
+convert $IMAGE -noise 7 +noise Uniform -gaussian-blur 3x3 -colors 10 - | composite -gravity southeast $MASCOT - $IMAGE
 i3lock --textcolor=ffffff00 --insidecolor=ffffff1c --ringcolor=ffffff3e --linecolor=ffffff00 --keyhlcolor=00000080 --ringvercolor=00000000 --insidevercolor=0000001c --ringwrongcolor=00000055 --insidewrongcolor=0000001c  -i $IMAGE
