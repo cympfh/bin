@@ -4,8 +4,9 @@
 # git@github.com:eBrnd/i3lock-color.git
 
 IMAGE=/tmp/i3lock.png
+MASCOT=$(dirname $0)/img/azusa.png
 
 scrot $IMAGE
-#convert $IMAGE -median 4 - | composite -gravity southeast $(dirname $0)/img/nekomezaka.png - $IMAGE
-convert $IMAGE -gaussian-blur 5x10  - | composite -gravity southeast $(dirname $0)/img/nekomezaka.png - $IMAGE
+convert $IMAGE -gaussian-blur 3x3 -colors 8 - | composite -gravity southeast $MASCOT - $IMAGE
+#convert $IMAGE -gaussian-blur 10x10  - | composite -gravity southeast $MASCOT - $IMAGE
 i3lock --textcolor=ffffff00 --insidecolor=ffffff1c --ringcolor=ffffff3e --linecolor=ffffff00 --keyhlcolor=00000080 --ringvercolor=00000000 --insidevercolor=0000001c --ringwrongcolor=00000055 --insidewrongcolor=0000001c  -i $IMAGE
