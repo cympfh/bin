@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
+# vim: set ft=ruby:
 
 require 'date'
 
 def usage
   STDERR.puts "SYNOPSIS"
-  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile]"
-  STDERR.puts "For more detail, please see http://github.com/cympfh/calendar"
+  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile] [--color]"
+  STDERR.puts "For more detail, please see https://github.com/cympfh/calendar"
   exit 0
 end
 
@@ -13,6 +14,7 @@ index = nil
 $DIR = nil
 $A=30 # in default
 $B=0
+color = false
 
 # parse args
 for i in 0 ... ARGV.length
@@ -29,6 +31,8 @@ for i in 0 ... ARGV.length
     index = File.basename ARGV[i+1]
     $DIR = File.dirname ARGV[i+1]
     i += 1
+  elsif arg == "-c" or arg == "--color"
+    color = true
   end
 end
 
@@ -36,7 +40,7 @@ if index == nil
   usage
 end
 
-# collection of [ Date, String ]
+# collection of [ Date, SrcFile, Content ]
 $DICT = []
 
 # read and trace
@@ -60,7 +64,7 @@ def read(file)
       if (res = /^(.*)\t(.*)$/.match line) != nil
         date = Date.parse(res[1])
         content = res[2]
-        $DICT << [date, content]
+        $DICT << [date, file, content]
       else
         STDERR.puts "parse error(1): #{line} in #{file}"
       end
@@ -73,14 +77,25 @@ end
 #
 read(index)
 
+colhash = {}
 $DICT.sort!
 from = Date.today - 1 - $B
 to = Date.today + $A
 for i in 0 ... $DICT.length
   date = $DICT[i][0]
   if date > from and date <= to
-    content = $DICT[i][1]
-    puts "#{date} (#{date.strftime('%a')})\t#{content}"
+    content = $DICT[i][2]
+    if color == false
+      puts "#{date} (#{date.strftime('%a')})   #{content}"
+    else
+      delimiter = ' '
+      src = $DICT[i][1]
+      if colhash[src] == nil
+        colhash[src] = (colhash.size) % 7
+      end
+      delimiter = "\e[4#{colhash[src]+1}m \e[0m"
+      puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "\e[4;34m\\&\e[0m")}"
+    end
   end
 end
 
