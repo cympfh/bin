@@ -1,0 +1,86 @@
+#!/usr/bin/env ruby
+
+require 'date'
+
+def usage
+  STDERR.puts "SYNOPSIS"
+  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile]"
+  STDERR.puts "For more detail, please see http://github.com/cympfh/calendar"
+  exit 0
+end
+
+index = nil
+$DIR = nil
+$A=30 # in default
+$B=0
+
+# parse args
+for i in 0 ... ARGV.length
+  arg = ARGV[i]
+  if arg == nil or arg == "-h" or arg == "-?" or arg == "--help"
+    usage
+  elsif arg == "-A"
+    $A = ARGV[i+1].to_i
+    i += 1
+  elsif arg == "-B"
+    $B = ARGV[i+1].to_i
+    i += 1
+  elsif arg == "-f"
+    index = File.basename ARGV[i+1]
+    $DIR = File.dirname ARGV[i+1]
+    i += 1
+  end
+end
+
+if index == nil
+  usage
+end
+
+# collection of [ Date, String ]
+$DICT = []
+
+# read and trace
+def read(file)
+  lines = File.read($DIR + '/' + file).chomp.split("\n")
+  for line in lines
+    line = line.chomp
+    # ignore line
+    if line == "" or line.index("//") == 0
+    # #include
+    elsif line.index("#") == 0
+      if /<[^>]*>/.match(line) == nil
+        STDERR.puts "parse error(0): #{line} in #{file}"
+      else
+        subfile = /<[^>]*>/.match(line)[0][1...-1]
+        read subfile
+      end
+    # date line
+    else
+      res = false
+      if (res = /^(.*)\t(.*)$/.match line) != nil
+        date = Date.parse(res[1])
+        content = res[2]
+        $DICT << [date, content]
+      else
+        STDERR.puts "parse error(1): #{line} in #{file}"
+      end
+    end
+  end
+end
+
+#
+# main
+#
+read(index)
+
+$DICT.sort!
+from = Date.today - 1 - $B
+to = Date.today + $A
+for i in 0 ... $DICT.length
+  date = $DICT[i][0]
+  if date > from and date <= to
+    content = $DICT[i][1]
+    puts "#{date} (#{date.strftime('%a')})\t#{content}"
+  end
+end
+
