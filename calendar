@@ -4,8 +4,11 @@
 require 'date'
 
 def usage
-  STDERR.puts "SYNOPSIS"
-  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile] [--color]"
+  STDERR.puts "usage:"
+  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile] (--color | --html)"
+  STDERR.puts "options:"
+  STDERR.puts "    --color   output with color sequence"
+  STDERR.puts "    --html    output in html format"
   STDERR.puts "For more detail, please see https://github.com/cympfh/calendar"
   exit 0
 end
@@ -15,6 +18,7 @@ $DIR = nil
 $A=30 # in default
 $B=0
 color = false
+html = false
 
 # parse args
 for i in 0 ... ARGV.length
@@ -33,6 +37,8 @@ for i in 0 ... ARGV.length
     i += 1
   elsif arg == "-c" or arg == "--color"
     color = true
+  elsif arg == "--html"
+    html = true
   end
 end
 
@@ -81,15 +87,17 @@ colhash = {}
 $DICT.sort!
 from = Date.today - 1 - $B
 to = Date.today + $A
-for i in 0 ... $DICT.length
-  date = $DICT[i][0]
+
+for d in $DICT do
+  date, src, content = d
   if date > from and date <= to
-    content = $DICT[i][2]
-    if color == false
+    if (color == false) and (html == false)
       puts "#{date} (#{date.strftime('%a')})   #{content}"
-    else
+    elsif html == true
+      content = content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "<a href='\\&'>\\&</a>")
+      puts "<DT>#{date} (#{date.strftime('%a')})</DT><DD>#{content}</DD>"
+    elsif color == true
       delimiter = ' '
-      src = $DICT[i][1]
       if colhash[src] == nil
         colhash[src] = (colhash.size) % 7
       end
