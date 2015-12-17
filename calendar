@@ -9,6 +9,7 @@ def usage
   STDERR.puts "options:"
   STDERR.puts "    --color   output with color sequence"
   STDERR.puts "    --html    output in html format"
+  STDERR.puts "    -s        be enable only when --html (`s` of `standalone`)"
   STDERR.puts "For more detail, please see https://github.com/cympfh/calendar"
   exit 0
 end
@@ -19,9 +20,10 @@ $A=30 # in default
 $B=0
 color = false
 html = false
+standalone = false
 
 # parse args
-for i in 0 ... ARGV.length
+ARGV.length.times {|i|
   arg = ARGV[i]
   if arg == nil or arg == "-h" or arg == "-?" or arg == "--help"
     usage
@@ -37,10 +39,12 @@ for i in 0 ... ARGV.length
     i += 1
   elsif arg == "-c" or arg == "--color"
     color = true
+  elsif arg == "-s"
+    standalone = true
   elsif arg == "--html"
     html = true
   end
-end
+}
 
 if index == nil
   usage
@@ -88,18 +92,31 @@ $DICT.sort!
 from = Date.today - 1 - $B
 to = Date.today + $A
 
+# html header
+if html and standalone
+  puts <<EOM
+<title>calendar</title>
+<style>
+  @font-face {font-family:'Josefin Sans';font-style:normal;font-weight:400;src: local('Josefin Sans'),local('JosefinSans'),url(https://fonts.gstatic.com/s/josefinsans/v9/xgzbb53t8j-Mo-vYa23n5ugdm0LZdjqr5-oayXSOefg.woff2) format('woff2');}
+  body{font-size:2.0em;font-family:'Josefin Sans'}
+  dt{color:#338833;}
+</style>
+<body>
+EOM
+end
+
 for d in $DICT do
   date, src, content = d
   if date > from and date <= to
     if (color == false) and (html == false)
       puts "#{date} (#{date.strftime('%a')})   #{content}"
-    elsif html == true
+    elsif html
       content = content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "<a href='\\&'>\\&</a>")
       if content.include? 'DONE'
         content = "<s>#{content}\e</s>"
       end
       puts "<DT>#{date} (#{date.strftime('%a')})</DT><DD>#{content}</DD>"
-    elsif color == true
+    elsif color
       delimiter = ' '
       if colhash[src] == nil
         colhash[src] = (colhash.size) % 7
