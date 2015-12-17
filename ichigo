@@ -8,15 +8,27 @@ THNAME='苺ましまろ'
 
 # get board url ('http://viper.2ch.net/news4vip')
 BD=`curl -s http://menu.2ch.net/bbsmenu.html | nkf | grep ">${BDNAME}<" | sed 's/^.*HREF=\([^>]*\).*$/\1/'`
-## BD=http://viper.2ch.net/news4vip/
+echo BD $BD >&2 # http://viper.2ch.net/news4vip/
+if [ _$BD == _ ]; then
+  echo "Err BD" >&2
+  exit 1
+fi
 
 DOM=`echo $BD | cut -d '/' -f 3` ## viper.2ch.net
 BID=`echo $BD | cut -d '/' -f 4` ## news4vip
+echo DOM $DOM >&2
+echo BID $BID >&2
 
+echo ${BD}/subject.txt
 TID=`curl -s ${BD}/subject.txt | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1`
-## TID=1435961267
+echo TID $TID >&2
+
+if [ _$TID == _ ]; then
+  echo "Err TID" >&2
+  exit 1
+fi
 
 # get thread text
-# echo http://${DOM}/test/read.cgi/${BID}/${TID}
-curl -s http://${DOM}/test/read.cgi/${BID}/${TID} |
+echo http://${DOM}/test/read.cgi/${BID}/${TID} >&2
+curl -s http://${DOM}/test/read.cgi/${BID}/${TID} | nkf |
 grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
