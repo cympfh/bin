@@ -95,6 +95,9 @@ for d in $DICT do
       puts "#{date} (#{date.strftime('%a')})   #{content}"
     elsif html == true
       content = content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "<a href='\\&'>\\&</a>")
+      if content.include? 'DONE'
+        content = "<s>#{content}\e</s>"
+      end
       puts "<DT>#{date} (#{date.strftime('%a')})</DT><DD>#{content}</DD>"
     elsif color == true
       delimiter = ' '
@@ -102,6 +105,9 @@ for d in $DICT do
         colhash[src] = (colhash.size) % 7
       end
       delimiter = "\e[4#{colhash[src]+1}m \e[0m"
+      if content.include? 'DONE'
+        content = "\e[2m#{content}\e[0m"
+      end
       puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "\e[4;34m\\&\e[0m")}"
     end
   end
