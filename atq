@@ -1,0 +1,35 @@
+#!/usr/bin/env ruby
+
+require 'date'
+
+if ARGV.size < 2
+  puts "atq time comand <args>"
+  exit 0
+end
+time = DateTime.parse ARGV[0] + "+09:00"
+work = ARGV[1..-1].join ' '
+
+if time < DateTime.now
+  puts "#{time} is past"
+  exit 0
+end
+
+def iter(time, work)
+  now = DateTime.now
+
+  if now >= time
+    puts work
+    puts `#{work}`
+    exit 0
+  else
+    w = (time - now) * 24 * 60 * 60
+    w = w.to_f
+    w *= 0.95
+    eps = 0.1
+    w = eps if w < eps
+    sleep w
+    iter time, work
+  end
+end
+
+iter time, work
