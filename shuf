@@ -22,5 +22,9 @@ ls = open(arg == nil ? "/dev/stdin" : arg).readlines
 }
 
 for l in ls
-  puts l
+  begin
+    puts l
+  rescue Errno::EPIPE
+    exit 0
+  end
 end
