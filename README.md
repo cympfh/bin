@@ -18,3 +18,14 @@ export PATH=$PATH:/home/cympfh/git/twurl/bin
 2016年  1月  5日 火曜日 02:20:01 JST
 ```
 
+## shuf
+
+行をシャッフルする
+
+```
+   seq 100 | shuf
+```
+
+NB. `sort -R` はシャッフルではない.
+
+

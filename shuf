@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+
+# 参考;
+# https://ja.wikipedia.org/wiki/フィッシャー_-_イェーツのシャッフル#.E6.94.B9.E8.89.AF.E3.81.95.E3.82.8C.E3.81.9F.E3.82.A2.E3.83.AB.E3.82.B4.E3.83.AA.E3.82.BA.E3.83.A0
+#
+
+arg = ARGV[0] == nil ? nil : arg = ARGV[0]
+
+if arg == "-h" or arg == "--help"
+  STDERR.puts "SYNOPSIS: shuf <file>"
+  STDERR.puts "SYNOPSIS: cat <file> | shuf"
+  exit 0
+end
+
+ls = open(arg == nil ? "/dev/stdin" : arg).readlines
+
+(ls.length-1).downto(1).each {|i|
+  j = rand(i+1)
+  tmp = ls[i]
+  ls[i] = ls[j]
+  ls[j] = tmp
+}
+
+for l in ls
+  puts l
+end
