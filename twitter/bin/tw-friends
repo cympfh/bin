@@ -1,0 +1,12 @@
+#!/bin/bash
+
+tmp=`mktemp`
+next=-1
+
+while [ "_$next" != "_0" ]; do
+  twurl "/1.1/friends/list.json?skip_status=1&cursor=${next}" >$tmp
+  cat $tmp | jq -r '.users[].screen_name'
+  next=$( cat $tmp | jq -r '.next_cursor_str' )
+done
+
+rm $tmp
