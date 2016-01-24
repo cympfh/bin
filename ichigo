@@ -1,5 +1,21 @@
 #!/bin/bash
 
+if [ $# -ne 1 ]; then
+  echo "SYNOPSIS: ichigo <html-file-name>"
+  echo "  If the file not exists, copy the current thread"
+  echo "  Else, append the current thread"
+  echo "  To stdout, specific - for filename"
+  echo "SYNOPSIS: ichigo --img"
+  echo "  stdout image urls in the current thread"
+  exit 0
+fi
+
+IMGMODE=0 # default
+if [ $1 == '--img' ]; then
+  IMGMODE=1
+fi
+OUT=$1
+
 # name of the board (perfect match)
 BDNAME='ニュー速VIP'
 
@@ -30,5 +46,73 @@ fi
 
 # get thread text
 echo http://${DOM}/test/read.cgi/${BID}/${TID} >&2
-curl -s http://${DOM}/test/read.cgi/${BID}/${TID} | nkf |
-grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
+
+THREAD=`mktemp`
+curl -s http://${DOM}/test/read.cgi/${BID}/${TID} | nkf > $THREAD
+
+if [ $IMGMODE -eq 1 ]; then
+  cat $THREAD | grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
+else
+  TMP=`mktemp`
+  if [ -f $OUT ] && [ $OUT != '-' ]; then
+    :
+  else
+
+    # header
+  cat << EOM > $TMP
+<!DOCTYPE html>
+<html><head><title>苺ましまろ</title>
+<style>
+body {
+  font-family: "YukarryAA";
+}
+img {
+  height: 25vw;
+}
+b {
+  display: none;
+}
+</style>
+<script>
+document.addEventListener("DOMContentLoaded", function(eve) {
+  var ls = document.links;
+  for (var i=0; i < ls.length; ++i) {
+    if (ls[i].href.indexOf('http://jump.2ch.net/?') == 0) {
+      var src = ls[i].href.replace('jump.2ch.net/?', '');
+      ls[i].href = src;
+      ls[i].innerHTML = '<img src=' + src + ' />';
+    }
+  }
+}, false);
+</script>
+  </head>
+  <body>
+EOM
+
+    if [ $OUT == '-' ]; then
+      cat $TMP
+    else
+      cp $TMP $OUT
+    fi
+  fi
+
+  # filter posts html
+  cat $THREAD | grep '^<dt' | ruby -n -e 'date = $_.match(/[0-9]{4}\/[0-9]{2}\/[0-9]{2}/); time = $_.match(/[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}/); puts "<!-- #{date} #{time} --> #{$_}"' | sort -k 2,3 > $TMP
+  if [ $OUT == '-' ]; then
+    cat $TMP
+  else
+    cat $TMP >> $OUT
+
+    # unique processing
+    TMP1=`mktemp`
+    cat $OUT | grep '^<!--' | sort -k2,3 -u > $TMP1
+    TMP2=`mktemp`
+    cat $OUT | grep -v '^<!--' > $TMP2
+    cat $TMP2 $TMP1 > $OUT
+    rm $TMP1 $TMP2
+  fi
+  rm $TMP
+
+fi
+
+rm $THREAD
