@@ -4,7 +4,6 @@ if [ $# -ne 1 ]; then
   echo "SYNOPSIS: ichigo <html-file-name>"
   echo "  If the file not exists, copy the current thread"
   echo "  Else, append the current thread"
-  echo "  To stdout, specific - for filename"
   echo "SYNOPSIS: ichigo --img"
   echo "  stdout image urls in the current thread"
   exit 0
@@ -35,8 +34,8 @@ BID=`echo $BD | cut -d '/' -f 4` ## news4vip
 echo DOM $DOM >&2
 echo BID $BID >&2
 
-echo ${BD}/subject.txt
-TID=`curl -s ${BD}/subject.txt | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1`
+echo ${BD}subject.txt
+TID=`curl -s ${BD}subject.txt | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1`
 echo TID $TID >&2
 
 if [ _$TID == _ ]; then
@@ -52,67 +51,55 @@ curl -s http://${DOM}/test/read.cgi/${BID}/${TID} | nkf > $THREAD
 
 if [ $IMGMODE -eq 1 ]; then
   cat $THREAD | grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
-else
-  TMP=`mktemp`
-  if [ -f $OUT ] && [ $OUT != '-' ]; then
-    :
-  else
+  rm $THREAD
+  exit 0
+fi
 
-    # header
-  cat << EOM > $TMP
+HEADER=`mktemp`
+BODY=`mktemp`
+FOOTER=`mktemp`
+
+cat << EOM > $FOOTER
+<script src="./echo.min.js"></script>
+<script>
+echo.init({
+  offset: 100,
+  throttle: 250,
+  unload: false,
+  callback: function (element, op) { }
+});
+</script>
+</body>
+</html>
+EOM
+
+cat << EOM > $HEADER
 <!DOCTYPE html>
 <html><head><title>苺ましまろ</title>
 <style>
-body {
-  font-family: "YukarryAA";
-}
-img {
-  height: 25vw;
-}
-b {
-  display: none;
-}
+body { font-family: "YukarryAA"; }
+img { height: 25vw; }
+b { display: none; }
 </style>
-<script>
-document.addEventListener("DOMContentLoaded", function(eve) {
-  var ls = document.links;
-  for (var i=0; i < ls.length; ++i) {
-    if (ls[i].href.indexOf('http://jump.2ch.net/?') == 0) {
-      var src = ls[i].href.replace('jump.2ch.net/?', '');
-      ls[i].href = src;
-      ls[i].innerHTML = '<img src=' + src + ' />';
-    }
-  }
-}, false);
-</script>
-  </head>
-  <body>
+</head>
+<body>
 EOM
 
-    if [ $OUT == '-' ]; then
-      cat $TMP
-    else
-      cp $TMP $OUT
-    fi
-  fi
-
-  # filter posts html
-  cat $THREAD | grep '^<dt' | ruby -n -e 'date = $_.match(/[0-9]{4}\/[0-9]{2}\/[0-9]{2}/); time = $_.match(/[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}/); puts "<!-- #{date} #{time} --> #{$_}"' | sort -k 2,3 > $TMP
-  if [ $OUT == '-' ]; then
-    cat $TMP
-  else
-    cat $TMP >> $OUT
-
-    # unique processing
-    TMP1=`mktemp`
-    cat $OUT | grep '^<!--' | sort -k2,3 -u > $TMP1
-    TMP2=`mktemp`
-    cat $OUT | grep -v '^<!--' > $TMP2
-    cat $TMP2 $TMP1 > $OUT
-    rm $TMP1 $TMP2
-  fi
-  rm $TMP
-
+if [ -f $OUT ]; then
+  cat $OUT | grep '^<!--' | sort -k2,3 -u > $BODY
 fi
 
-rm $THREAD
+# filter posts html
+cat $THREAD | grep '^<dt' |
+ruby -n -e 'date = $_.match(/[0-9]{4}\/[0-9]{2}\/[0-9]{2}/); time = $_.match(/[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}/); puts "<!-- #{date} #{time} --> #{$_}"' |
+sed 's,jump.2ch.net/?,,g' |
+sed 's/>\(http[^>]*\.jpg\)</><img src="" data-echo="\1"></g' |
+sed 's/>\(http[^>]*\.png\)</><img src="" data-echo="\1"></g' |
+sed 's/>\(http[^>]*\.gif\)</><img src="" data-echo="\1"></g' >> $BODY
+
+# 最後
+cat $HEADER >$OUT
+cat $BODY | sort -k 2,3 -u >>$OUT
+cat $FOOTER >>$OUT
+
+rm $HEADER $BODY $FOOTER $THREAD
