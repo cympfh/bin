@@ -60,7 +60,7 @@ BODY=`mktemp`
 FOOTER=`mktemp`
 
 cat << EOM > $FOOTER
-<script src="./echo.min.js"></script>
+<script src="http://cympfh.cc/js/echo.min.js"></script>
 <script>
 echo.init({
   offset: 100,
