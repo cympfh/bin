@@ -1,0 +1,22 @@
+#!/bin/bash
+
+if [ $# -eq 0 ]; then
+  echo "SYNOPSIS: xf <TERMINAL>"
+  echo "SYNOPSIS: xf off <TERMINAL>"
+  exit 0
+fi
+
+if [ $1 == "off" ]; then
+
+  TERMINAL=$2
+  xrandr --output $TERMINAL --off
+
+else
+
+  TERMINAL=$1
+  MODE=$( xrandr | grep -A1 $TERMINAL | tail -1 | awk '{print $1}' )
+
+  echo $MODE
+  xrandr --output $TERMINAL --mode $MODE --auto
+
+fi
