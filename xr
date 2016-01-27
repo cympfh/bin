@@ -15,8 +15,9 @@ else
 
   TERMINAL=$1
   MODE=$( xrandr | grep -A1 $TERMINAL | tail -1 | awk '{print $1}' )
+  MAIN=$( xrandr -q | head -2 | tail -1 | awk '{print $1}' )
 
   echo $MODE
-  xrandr --output $TERMINAL --mode $MODE --auto
+  xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
 
 fi
