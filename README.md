@@ -28,4 +28,8 @@ export PATH=$PATH:/home/cympfh/git/twurl/bin
 
 NB. `sort -R` はシャッフルではない.
 
+## xr
+
+xrandr をちょっとだけ楽に叩く.
+mode (解像度) を peco 使って選択する.
 
