@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+
+require 'date'
+s = DateTime.now
+loop do
+  c = DateTime.now
+  hr = ((c - s) * 24 ).to_i % 24
+  min = ((c - s) * 24 * 60 ).to_i % 60
+  sec = ((c - s) * 24 * 60 * 60 ).to_i % 60
+  if hr == 0
+    print "\r#{min} min #{sec} sec"
+  else
+    print "\r#{hr} hr #{min} min #{sec} sec"
+  end
+  sleep 0.2
+end
+
