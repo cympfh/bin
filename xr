@@ -1,8 +1,13 @@
 #!/bin/bash
 
 if [ $# -eq 0 ]; then
-  echo "SYNOPSIS: xf <TERMINAL> [<mode>]"
-  echo "SYNOPSIS: xf off <TERMINAL>"
+  cat << HELP
+SYNOPSIS: xf <TERMINAL> [<mode>]
+SYNOPSIS: xf off <TERMINAL>
+
+xrandr -q
+HELP
+  xrandr -q
   exit 0
 fi
 
