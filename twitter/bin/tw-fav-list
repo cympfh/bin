@@ -21,8 +21,8 @@ while :; do
 
   twurl /1.1/favorites/list.json?count=200${OPT} >$TMP
 
-  cat $TMP | jq '.[].id'
-  if [ $( cat $TMP | jq '.[].id' | wc -l ) -eq 0 ]; then
+  cat $TMP | jq -r '.[].id_str'
+  if [ $( cat $TMP | jq -r '.[].id_str' | wc -l ) -eq 0 ]; then
     break
   else
     OPT="&max_id=$(( $( cat $TMP | jq '.[].id' | tail -1 ) - 1 ))"
