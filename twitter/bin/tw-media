@@ -1,7 +1,16 @@
 #!/bin/bash
 
-if [ $# -lt 1 ]; then
-  echo "Usage tw-media [ <text> ] <url or path of image>"
+usage() {
+  cat << HELP
+Usage: tw-media [text] <image>
+
+upload image (specified by url or local-path) with text.
+text is optional.
+HELP
+}
+
+if [ $# -lt 1 -o "_$1" == "_-h" -o "_$1" == "_-?" ]; then
+  usage
   exit 0
 fi
 
