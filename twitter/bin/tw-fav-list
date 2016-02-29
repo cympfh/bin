@@ -1,0 +1,33 @@
+#!/bin/bash
+
+usage() {
+  cat << HELP
+Usage: tw-fav-list
+
+Get your favorites
+call tw-fav-list without args
+HELP
+}
+
+if [ $# -ne 0 ]; then
+  usage
+  exit 0
+fi
+
+TMP=`mktemp`
+OPT=""
+
+while :; do
+
+  twurl /1.1/favorites/list.json?count=200${OPT} >$TMP
+
+  cat $TMP | jq '.[].id'
+  if [ $( cat $TMP | jq '.[].id' | wc -l ) -eq 0 ]; then
+    break
+  else
+    OPT="&max_id=$(( $( cat $TMP | jq '.[].id' | tail -1 ) - 1 ))"
+  fi
+
+done | sort -r | uniq
+
+rm $TMP
