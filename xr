@@ -22,9 +22,8 @@ else
   if [ $# -eq 2 ]; then
     MODE=$2
   else
-    MODE=$( xrandr | grep -A100 $TERMINAL | tail -1 | awk '{print $1}' )
     MODE=$(
-    xrandr -q | grep -A100 eDP1 |
+    xrandr -q | grep -A100 $TERMINAL |
     awk 'BEGIN{a=0}substr($0,0,1)!=" "{a+=1}a==1&&substr($0,0,1)==" "{print $1}' |
     peco
     )
