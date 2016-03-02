@@ -2,7 +2,9 @@
 
 usage() {
   cat << HELP
-Usage: tw-follow <screen_name>
+Usage: tw-unfav <id>
+
+destroy favoriate for id
 HELP
 }
 
@@ -11,6 +13,4 @@ if [ $# -lt 1 -o "_$1" == "_-h" -o "_$1" == "_-?" ]; then
   exit 0
 fi
 
-NAME=$1
-URL=/1.1/friendships/create.json
-twurl -X POST $URL -d "screen_name=$NAME"
+twurl -X POST /1.1/favorites/destroy.json -d id=$1

@@ -1,0 +1,17 @@
+#!/bin/bash
+
+usage() {
+  cat << HELP
+Usage: tw-media-list <id>
+
+id is of a status.
+Get urls of images in the status.
+HELP
+}
+
+if [ $# -lt 1 -o "_$1" == "_-h" -o "_$1" == "_-?" ]; then
+  usage
+  exit 0
+fi
+
+twurl /1.1/statuses/show.json?id=$1 | jq -r '.extended_entities.media[].media_url_https'
