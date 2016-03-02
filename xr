@@ -30,6 +30,10 @@ else
     )
   fi
 
+  if [ "_$MODE" == "_" ]; then # when peco exits with C-c
+    exit 0
+  fi
+
   MAIN=$( xrandr -q | head -2 | tail -1 | awk '{print $1}' )
   echo xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
   xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
