@@ -2,8 +2,8 @@
 
 if [ $# -eq 0 ]; then
   cat << HELP
-SYNOPSIS: xf <TERMINAL> [<mode>]
-SYNOPSIS: xf off <TERMINAL>
+SYNOPSIS: xr <TERMINAL> [<MODE>]
+SYNOPSIS: xr off <TERMINAL>
 
 xrandr -q
 HELP
