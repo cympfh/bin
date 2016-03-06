@@ -1,3 +1,0 @@
-#!/bin/bash
-
-twurl set default $1

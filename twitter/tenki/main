@@ -1,6 +1,0 @@
-#!/bin/sh
-
-OUT=data
-sh nine.sh >$OUT
-sh livedoor.sh >>$OUT
-gnuplot plot.gp

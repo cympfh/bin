@@ -1,9 +1,0 @@
-#!/bin/sh
-
-(
-cd `dirname $0`/../tenki
-
-sh main
-URL=`cat data | curl -F "sprunge=<-" http://sprunge.us`
-tw-media $URL plot.png
-)
