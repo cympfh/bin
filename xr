@@ -2,8 +2,8 @@
 
 if [ $# -eq 0 ]; then
   cat << HELP
-SYNOPSIS: xf <TERMINAL> [<mode>]
-SYNOPSIS: xf off <TERMINAL>
+SYNOPSIS: xr <TERMINAL> [<MODE>]
+SYNOPSIS: xr off <TERMINAL>
 
 xrandr -q
 HELP
@@ -22,12 +22,15 @@ else
   if [ $# -eq 2 ]; then
     MODE=$2
   else
-    MODE=$( xrandr | grep -A100 $TERMINAL | tail -1 | awk '{print $1}' )
     MODE=$(
-    xrandr -q | grep -A100 eDP1 |
+    xrandr -q | grep -A100 $TERMINAL |
     awk 'BEGIN{a=0}substr($0,0,1)!=" "{a+=1}a==1&&substr($0,0,1)==" "{print $1}' |
     peco
     )
+  fi
+
+  if [ "_$MODE" == "_" ]; then # when peco exits with C-c
+    exit 0
   fi
 
   MAIN=$( xrandr -q | head -2 | tail -1 | awk '{print $1}' )
