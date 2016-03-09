@@ -1,5 +1,18 @@
 #!/usr/bin/env ruby
 
+if ARGV.size > 0
+  puts <<-EOS
+Usage: timer
+timer counts up the time.
+  EOS
+  exit 0
+end
+
+Signal.trap("INT") {
+  puts ""
+  exit 0
+}
+
 require 'date'
 s = DateTime.now
 loop do
