@@ -91,7 +91,7 @@ fi
 
 # filter posts html
 cat $THREAD | grep '^<dt' |
-grep -v '今から元カノに痛メする' |
+grep -v 'Over 1000.*今から元カノに痛メする' |
 ruby -n -e 'date = $_.match(/[0-9]{4}\/[0-9]{2}\/[0-9]{2}/); time = $_.match(/[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}/); puts "<!-- #{date} #{time} --> #{$_}"' |
 sed 's,jump.2ch.net/?,,g' |
 sed 's/>\(http[^>]*\.jpg\)</><img src="" data-echo="\1"></g' |
