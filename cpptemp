@@ -4,16 +4,87 @@ if [ "_$1" = "_-h" -o "_$1" = "_--help" ]; then
   cat << USAGE
 cpptemp: output the cpp template
 
+SYNOPSIS: cpptemp [<type>] [--clang]
+
+type:
+  in default, standard template is put
   -g,  --geo   template for geometry
   -m,  --min   minimal template
+
+  in default, import only <bits/stdc++.h> (as gcc)
+  clang does not contain this header
+
+  --clang      replace <bits/stdc++.h>
 USAGE
   exit
 fi
 
-if [ $# -eq 0 ]; then
-  # normal template
-  cat << TEMP
+TYPE=0
+[ "_$1" = "_-g" -o "_$1" = "_--geo" ] && TYPE=1
+[ "_$2" = "_-g" -o "_$2" = "_--geo" ] && TYPE=1
+[ "_$1" = "_-m" -o "_$1" = "_--min" ] && TYPE=2
+[ "_$2" = "_-m" -o "_$2" = "_--min" ] && TYPE=2
+
+IMPORT=0
+[ "_$1" = "_--clang" ] && IMPORT=1
+[ "_$2" = "_--clang" ] && IMPORT=1
+
+if [ $IMPORT -eq 0 ]; then
+  cat << IMPORT
 #include <bits/stdc++.h>
+IMPORT
+else
+  cat << IMPORT
+#include <algorithm>
+#include <array>
+#include <bitset>
+#include <ccomplex>
+#include <cmath>
+#include <complex>
+#include <cstring>
+#include <ctime>
+#include <deque>
+#include <exception>
+#include <fstream>
+#include <functional>
+#include <iomanip>
+#include <ios>
+#include <iosfwd>
+#include <iostream>
+#include <istream>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <locale>
+#include <map>
+#include <memory>
+#include <new>
+#include <numeric>
+#include <ostream>
+#include <queue>
+#include <random>
+#include <ratio>
+#include <regex>
+#include <set>
+#include <sstream>
+#include <stack>
+#include <stdexcept>
+#include <streambuf>
+#include <string>
+#include <tuple>
+#include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <valarray>
+#include <vector>
+IMPORT
+fi
+
+if [ $TYPE -eq 0 ]; then
+  # normal template
+
+  cat << TEMP
 using namespace std;
 
 #define rep(i,n) for(int i=0;i<(n);++i)
@@ -81,10 +152,11 @@ int main() {
   return 0;
 }
 TEMP
-elif [ "_$1" = "_-g" -o "_$1" = "_--geo" ]; then
+
+elif [ $TYPE -eq 1 ]; then
   # geometry template
+
   cat << TEMP
-#include <bits/stdc++.h>
 using namespace std;
 
 #define rep(i,n) for(int i=0;i<(n);++i)
@@ -219,10 +291,11 @@ int main() {
   return 0;
 }
 TEMP
-elif [ "_$1" = "_-m" -o "_$1" = "_--min" ]; then
+
+elif [ $TYPE -eq 2 ]; then
   # minimal template
+
   cat << TEMP
-#include <bits/stdc++.h>
 using namespace std;
 #define rep(i,n) for(int i=0;i<(n);++i)
 
