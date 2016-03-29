@@ -3,7 +3,22 @@
 require 'date'
 
 if ARGV.size < 2
-  puts "atq time comand <args>"
+  STDERR.puts <<-HELP
+NAME
+    atq -- easy crontab
+
+SYNOPSIS
+    atq <time> <command [args]>
+
+    <time> written to be parsed as DateTime in Ruby
+    <command [args]> will run at the time
+    atq is running until <command> at foregrand
+
+EXAMPLE
+    atq 22:46 date
+
+    `date` will be run at today 22:46
+HELP
   exit 0
 end
 time = DateTime.parse ARGV[0] + "+09:00"
