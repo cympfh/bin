@@ -1,9 +1,17 @@
 #!/bin/sh
 
-BIN=/usr/libexec/locate.updatedb
-if [ -f $BIN ]; then
-  $BIN
-else
-  echo "You are not on MacOS"
-  echo "TODO: automatically proper updatedb runs"
-fi
+BINS=$( cat << ARRAY
+  /usr/libexec/locate.updatedb
+  /usr/bin/updatedb
+ARRAY
+)
+
+for BIN in $BINS; do
+  if [ -f $BIN ]; then
+    $BIN
+    exit 0
+  fi
+done
+
+echo "Something wrong? Any proper updatedb isnt set"
+
