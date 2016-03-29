@@ -1,0 +1,9 @@
+#!/bin/sh
+
+BIN=/usr/libexec/locate.updatedb
+if [ -f $BIN ]; then
+  $BIN
+else
+  echo "You are not on MacOS"
+  echo "TODO: automatically proper updatedb runs"
+fi
