@@ -15,9 +15,14 @@ SYNOPSIS
     atq is running until <command> at foregrand
 
 EXAMPLE
-    atq 22:46 date
+    atq 23:36 date
+        `date` will be run at 23:36 (located time) today.
+    atq 3/29/23:36 date
+        This specifies 03-29 23:36 (located time and day) this year.
+    atq 2017/3/30/23:36 date
+        This specifies also year.
 
-    `date` will be run at today 22:46
+    When time parsing successed, specified time is output in STDERR.
 HELP
   exit 0
 end
