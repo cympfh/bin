@@ -1,40 +1,71 @@
 #!/bin/bash
 
-if [ $# -eq 0 ]; then
+## Help
+help() {
   cat << HELP
-SYNOPSIS: xr <TERMINAL> [<MODE>]
-SYNOPSIS: xr off <TERMINAL>
+NAME
+    xr -- xrandr wrapper
 
-xrandr -q
+SYNOPSIS
+    xr {main|sub|off} <monitor> [<mode>]
+      main -- main monitor
+      sub  -- sub monitor (2nd display or projector)
+      off  -- stop using the monitor
+      (try \`xrandr -q\` to see your monitors)
+
+    xr q
+      alias to \`xrandr -q\`
 HELP
-  xrandr -q
   exit 0
-fi
+}
 
-if [ $1 == "off" ]; then
+[ $# -eq 0 ] && help
 
-  TERMINAL=$2
-  xrandr --output $TERMINAL --off
+case $1 in
+  off )
+    xrandr --output $2 --off
+    ;;
 
-else
+  q )
+    xrandr -q
+    ;;
 
-  TERMINAL=$1
-  if [ $# -eq 2 ]; then
-    MODE=$2
-  else
-    MODE=$(
-    xrandr -q | grep -A100 $TERMINAL |
-    awk 'BEGIN{a=0}substr($0,0,1)!=" "{a+=1}a==1&&substr($0,0,1)==" "{print $1}' |
-    peco
-    )
-  fi
+  main | sub )
+    TERMINAL=$2
+    MODE=$3
 
-  if [ "_$MODE" == "_" ]; then # when peco exits with C-c
-    exit 0
-  fi
+    # when TERMINAL is empty
+    [ "_$TERMINAL" == "_" ] && help
 
-  MAIN=$( xrandr -q | head -2 | tail -1 | awk '{print $1}' )
-  echo xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
-  xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
+    # filled by peco when MODE is empty
+    if [ "_$MODE" == "_" ]; then
+      MODE=$( xrandr -q | grep -A100 $TERMINAL |
+        awk 'BEGIN{a=0}substr($0,0,1)!=" "{a+=1}a==1&&substr($0,0,1)==" "{print $1}' |
+        peco
+      )
+    fi
 
-fi
+    # when peco exits with C-c or something is wrong
+    if [ "_$MODE" == "_" ]; then
+      exit 0
+    fi
+
+    case $1 in
+
+      main )
+        xrandr --output $TERMINAL --mode $MODE --auto
+        ;;
+
+      sub )
+        MAIN=$( xrandr -q | grep ' connected primary' | head -1 | awk '$0=$1' )
+        xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
+        ;;
+    esac
+    ;;
+
+  * )
+    help
+    ;;
+
+esac
+
