@@ -1,0 +1,53 @@
+#!/bin/bash
+
+help() {
+  cat << HELP
+NAME
+  animetick -- animetick
+
+SYNOPSIS
+  animetick [ --color ]
+HELP
+  exit 0
+}
+
+plain() {
+  curl -s http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1 |
+  tr -d '\r' |
+  grep -E '^(DTSTART|SUMMARY)' |
+  sed 's/^[^:]*://g' | while :; do
+    read a; read b;
+    [ -z "$a" ] && break
+    # 20160404T003000
+    echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
+    echo " $b"
+  done
+}
+
+color() {
+  curl -s http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1 |
+  tr -d '\r' |
+  grep -E '^(DTSTART|SUMMARY)' |
+  sed 's/^[^:]*://g' | while :; do
+    read a; read b;
+    [ -z "$a" ] && break
+    # 20160404T003000
+    echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\x1b[32m\1/\2/\3 \4:\5\x1b[0m,g'
+    printf " \x1b[34m$b\x1b[0m\n"
+  done
+}
+
+if [ $# -eq 0 ]; then
+  plain
+else
+  case $1 in
+    -p | --plain )
+      plain ;;
+    -c | --color )
+      color ;;
+    * )
+      help
+      ;;
+  esac
+fi
+
