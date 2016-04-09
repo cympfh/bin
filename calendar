@@ -4,13 +4,21 @@
 require 'date'
 
 def usage
-  STDERR.puts "usage:"
-  STDERR.puts "    calendar [-A num] [-B num] [-f calendarfile] (--color | --html)"
-  STDERR.puts "options:"
-  STDERR.puts "    --color   output with color sequence"
-  STDERR.puts "    --html    output in html format"
-  STDERR.puts "    -s        be enable only when --html (`s` of `standalone`)"
-  STDERR.puts "For more detail, please see https://github.com/cympfh/calendar"
+  STDERR.puts <<-HELP
+NAME
+  calendar -- yet another calendar command
+
+SYNOPSIS
+  calendar [-A num] [-B num] [-f calendarfile] {--color|--html}
+
+OPTIONS
+  --color   output with color sequence
+  --html    output in html format
+  -s        be enable only when --html (`s` of `standalone`)
+
+For more detail, please see https://github.com/cympfh/calendar
+HELP
+
   exit 0
 end
 
