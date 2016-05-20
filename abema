@@ -1,0 +1,73 @@
+#!/bin/bash
+
+DATE=$(date '+%Y%m%d')
+CHANNELS="14,15,16,17"
+TMP=$(mktemp)
+
+bye() {
+  rm "${TMP}"
+  exit 0
+}
+
+usage() {
+  cat << HELP
+SYNOPSIS
+  $0 --list
+SYNOPSIS
+  $0 -c 14,15,16,17
+SYNOPSIS
+  $0 -c 14,15,16,17 -d 20160522
+HELP
+  bye
+}
+
+# get your timetable
+get() {
+  URL="https://api.abema.io/v1/media?dateFrom=${DATE}&dateTo=${DATE}"
+  AUTH_HEADER='Authorization: bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkZXYiOiJhYWJlMTczMi1kMjZhLTQ3MTctODRjNC05YTA1ZjcwMDA5MzAiLCJleHAiOjIxNDc0ODM2NDcsImlzcyI6ImFiZW1hLmlvL3YxIiwic3NzIjowLCJzdWIiOiJQMXd0a0E2WEhaNyJ9.7mReszvTXoBeNP7ZZ3pNfE4BYJQ--OXXRRkkgg0pJWg'
+  curl -s "$URL" -H "$AUTH_HEADER" > "${TMP}"
+}
+
+# channel list
+list() {
+  get
+  for i in $(seq 0 24); do
+    jq -r "\"${i} \\(.channelSchedules[${i}].channelId)\"" "${TMP}"
+  done
+  bye
+}
+
+# parse args
+while [ ! -z "$1" ]; do
+  case $1 in
+    -d )
+      DATE=$2
+      shift 2
+      ;;
+    -c )
+      CHANNELS=$2
+      shift 2
+      ;;
+    --list )
+      list
+      ;;
+    * )
+      usage
+      ;;
+  esac
+done
+
+# show tables for each channels
+get
+echo "${CHANNELS}" | tr , '\n' | while read i; do
+  ID=$( jq -r ".channelSchedules[${i}].channelId" "${TMP}" )
+  echo "# https://abema.tv/now-on-air/${ID}"
+  jq -r ".channelSchedules[${i}].slots[] | \"\\(.startAt)\n\\(.endAt)\n\\(.title)\"" "${TMP}" |
+  while read a; do
+    read b; read c
+    a=$(date --date="@$a" '+%H:%M')
+    b=$(date --date="@$b" '+%H:%M')
+    echo "${a} ${b} ${c}"
+  done
+done
+bye
