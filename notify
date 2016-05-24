@@ -1,0 +1,48 @@
+#!/bin/bash
+
+TITLE=
+SUBTITLE=
+MESSAGE=
+ICON=$HOME/bin/img/osaka.jpg
+
+usage() {
+  cat << USAGE
+NAME
+    notify -- my wrapper for gnome-notify (gnome), terminal-notifier (OSX)
+
+SYNOPSIS
+    notify [ --title <string> ] [ --subtitle <string> ] [ --icon <path or URL> ] <string>
+USAGE
+  exit 0
+}
+
+while [ ! -z $1 ]; do
+  case $1 in
+    --title | -title )
+      TITLE=$2
+      shift 2
+      ;;
+    --subtitle | --sub | -subtitle | -sub )
+      SUBTITLE=$2
+      shift 2
+      ;;
+    --icon | -icon )
+      ICON=$2
+      shift 2
+      ;;
+    --help | -h | -? )
+      usage
+      ;;
+    * )
+      MESSAGE=$1
+      shift 1
+      ;;
+  esac
+done
+
+if ( which terminal-notifier >/dev/null ); then
+  terminal-notifier -title "${TITLE}" -subtitle "${SUBTITLE}" -message "${MESSAGE}" -appIcon "${ICON}"
+else
+  echo "command not found"
+fi
+
