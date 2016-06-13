@@ -1,0 +1,13 @@
+#!/bin/bash
+
+OUT=~/Pictures/hoge.png
+
+if [ "$(uname)" != "Darwin" ]; then
+
+  import -density 2000 -depth 900 "$OUT"
+
+else
+
+  screencapture -x -s "$OUT"
+
+fi
