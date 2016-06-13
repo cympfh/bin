@@ -131,7 +131,7 @@ for d in $DICT do
       end
       delimiter = "\e[4#{colhash[src]+1}m \e[0m"
       if content.include? 'DONE'
-        content = "\e[2m#{content}\e[0m"
+        content = "\e[90m#{content}\e[0m"
       end
       puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "\e[4;34m\\&\e[0m")}"
     end
