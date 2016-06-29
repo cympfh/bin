@@ -1,0 +1,6 @@
+#!/bin/bash
+
+while :; do
+  rtcwake -m mem -s $(( 1 * 60 * 60 - 300 ))
+  sleep 300
+done

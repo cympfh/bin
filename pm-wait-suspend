@@ -1,0 +1,9 @@
+#!/bin/bash
+
+echo "wait $1 then pm-suspend"
+while :; do
+  pgrep "$1" || break
+  sleep 10
+done
+
+pm-suspend
