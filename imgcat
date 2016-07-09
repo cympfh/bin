@@ -38,14 +38,17 @@ def cat(fn)
     elsif w == -1
       w, h = line.split.map(&:to_i)
     elsif colorscheme < 1
-      colorscheme = line.to_f + 1
+      colorscheme = line.to_i
     else
       bitmap += line.split.map(&:to_i)
     end
   end
 
+  m = bitmap.max + 1
+  m = m.to_f
+
   for i in 0...bitmap.size do
-    STDOUT.print char(bitmap[i] / colorscheme)
+    STDOUT.print char(bitmap[i] / m)
     STDOUT.puts "" if i % w == w - 1
   end
 end
