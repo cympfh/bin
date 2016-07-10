@@ -1,0 +1,58 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+
+$options = {:geometry => "80x80"}
+OptionParser.new do |opts|
+  opts.on("-g [WxH]", "--geometry", "80x80x in default") do |v|
+    $options[:geometry] = v
+  end
+end.parse!
+
+def usage
+  puts <<EOM
+Usage: imgcat image_files...
+EOM
+  exit 0
+end
+
+def char(x)
+  chars = ['@', '#', 'e', '+', '/', '-', '.', ' ']
+  i = (x * chars.size).floor
+  chars[i]
+end
+
+def cat(fn)
+
+  `convert -geometry #{$options[:geometry]} -compress none #{fn} /tmp/tmp.pgm`
+
+  w, h = -1, -1
+  bitmap = []
+  colorscheme = -1
+
+  head = true
+  for line in File.open("/tmp/tmp.pgm").readlines() do
+    next if line[0] == '#'
+    if head then
+      head = false
+    elsif w == -1
+      w, h = line.split.map(&:to_i)
+    elsif colorscheme < 1
+      colorscheme = line.to_i
+    else
+      bitmap += line.split.map(&:to_i)
+    end
+  end
+
+  m = bitmap.max + 1
+  m = m.to_f
+
+  for i in 0...bitmap.size do
+    STDOUT.print char(bitmap[i] / m)
+    STDOUT.puts "" if i % w == w - 1
+  end
+end
+
+for f in ARGV do
+  cat f
+end
