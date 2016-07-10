@@ -2,23 +2,24 @@
 
 URL=$1
 case $URL in
+
   *manga* )
-curl -s $URL -H 'Cookie: p_ab_id=7; PHPSESSID=4452325_72001d7fa244408aa467c0c4769652a4' |
-sed 's/<img/\n<>/g' |
-grep -e '^<>' |
-grep ui-scroll-view |
-sed 's/^.*data-src=\"\([^\"]*\)\".*$/\1/' |
-xargs -n 1 wget --referer=$URL
-;;
+    curl -s "$URL" -H 'Cookie: PHPSESSID=4452325_1a94695c594dc91edf46ef6a88585b96; p_ab_id=0;' |
+    sed 's/<img/\n<>/g' |
+    grep -e '^<>' |
+    grep ui-scroll-view |
+    sed 's/^.*data-src=\"\([^\"]*\)\".*$/\1/' |
+    xargs -n 1 wget --referer="$URL"
+    ;;
 
   *medium* )
-curl -s $URL -H 'Cookie: p_ab_id=7; PHPSESSID=4452325_72001d7fa244408aa467c0c4769652a4' |
-sed 's/<img/\n<>/g' |
-grep -e '^<>' |
-grep original-image |
-sed 's/^.*data-src=\"\([^\"]*\)\".*$/\1/' |
-xargs -n 1 wget --referer=$URL
-;;
+    curl -s "$URL" -H 'Cookie: PHPSESSID=4452325_1a94695c594dc91edf46ef6a88585b96; p_ab_id=0;' |
+    sed 's/<img/\n<>/g' |
+    grep -e '^<>' |
+    grep original-image |
+    sed 's/^.*data-src=\"\([^\"]*\)\".*$/\1/' |
+    xargs -n 1 wget --referer="$URL"
+    ;;
 
   * ) echo 'unknown URL'
     ;;
