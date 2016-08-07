@@ -1,0 +1,34 @@
+#!/bin/bash
+
+TODO_ACCOUNT=cympfh_TODO
+CURRENT_ACCOUNT=$( tw-ls | grep -B 1 '(default)' | head -1 )
+
+usage() {
+    cat <<EOM
+todo <command> <args>
+
+command:
+  list
+  add <status>
+  rm <status-id>
+EOM
+    exit 0
+}
+
+twurl set default "$TODO_ACCOUNT"
+
+case "$1" in
+    list )
+        twurl "/1.1/statuses/home_timeline.json?count=199" | jq -r 'reverse | .[] | "\u001b[31m\(.id_str)\u001b[0m \(.text) \u001b[37m(created at \(.created_at))\u001b[0m"'
+        ;;
+    add )
+        echo twurl -X POST "/1.1/statuses/update.json" -d "status=$2"
+        ;;
+    rm )
+        twurl -XPOST "/1.1/statuses/destroy/$2.json"
+        ;;
+    * )
+        usage
+esac
+
+twurl set default "$CURRENT_ACCOUNT"
