@@ -25,7 +25,7 @@ end
 def cat(fn)
 
   `: > /tmp/tmp.pgm`
-  `convert -geometry #{$options[:geometry]} -compress none #{fn} /tmp/tmp.pgm`
+  `convert -geometry #{$options[:geometry]}! -compress none #{fn} /tmp/tmp.pgm`
 
   w, h = -1, -1
   bitmap = []
