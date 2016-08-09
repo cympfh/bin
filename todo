@@ -12,7 +12,6 @@ command:
   add <status>
   rm <status-id>
 EOM
-    exit 0
 }
 
 twurl set default "$TODO_ACCOUNT"
