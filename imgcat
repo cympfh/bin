@@ -33,7 +33,9 @@ def cat(fn)
 
   head = true
   for line in File.open("/tmp/tmp.pgm").readlines() do
+    line = line.chomp
     next if line[0] == '#'
+    next if line == ''
     if head then
       head = false
     elsif w == -1
