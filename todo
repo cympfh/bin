@@ -22,7 +22,7 @@ case "$1" in
         twurl "/1.1/statuses/home_timeline.json?count=199" | jq -r 'reverse | .[] | "\u001b[31m\(.id_str)\u001b[0m \(.text) \u001b[37m(created at \(.created_at))\u001b[0m"'
         ;;
     add )
-        echo twurl -X POST "/1.1/statuses/update.json" -d "status=$2"
+        twurl -X POST "/1.1/statuses/update.json" -d "status=$2"
         ;;
     rm )
         twurl -XPOST "/1.1/statuses/destroy/$2.json"
