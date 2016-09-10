@@ -17,7 +17,7 @@ for f in $@; do
     base=${f%.*}
     ext=_
 
-    kind=$(file "$f" | awk '{print $2}')
+    kind=$(file -- "$f" | awk '{print $2}')
     case $kind in
         JPEG )
             ext=jpg
@@ -34,7 +34,7 @@ for f in $@; do
         echo "Unknown extension: $f" >&2
     else
         echo "$f was moved to $base.$ext" >&2
-        mv "$f" "$base.$ext"
+        mv -- "$f" "$base.$ext"
     fi
 
 done
