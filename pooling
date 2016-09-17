@@ -1,0 +1,120 @@
+#!/usr/bin/env ruby
+
+# global
+
+size = 2
+MODE_MAX = 0
+MODE_MIN = 1
+MODE_AVG = 2
+mode = MODE_AVG
+
+require 'optparse'
+OptionParser.new {|opt|
+    opt.on('-s [int]', '--size', 'default=2') {|v| size = v.to_i }
+    opt.on('--max', 'max pooling (default)') {|v| mode = MODE_MAX}
+    opt.on('--min', 'min pooling') {|v| mode = MODE_MIN}
+    opt.on('--avg', 'avg pooling') {|v| mode = MODE_AVG}
+}.parse!
+
+def mean(pixels, mode)
+    mr = 0
+    mg = 0
+    mb = 0
+    if mode == MODE_MAX
+        for r, g, b in pixels
+            mr = [mr, r].max
+            mg = [mg, g].max
+            mb = [mb, b].max
+        end
+    elsif mode == MODE_AVG
+        for r, g, b in pixels
+            mr += r
+            mg += g
+            mb += b
+        end
+        mr /= pixels.size
+        mg /= pixels.size
+        mb /= pixels.size
+    else
+        mr = 255
+        mg = 255
+        mb = 255
+        for r, g, b in pixels
+            mr = [mr, r].min
+            mg = [mg, g].min
+            mb = [mb, b].min
+        end
+    end
+    [mr, mg, mb]
+end
+
+# read
+
+buf = []
+readlines.each {|line|
+    line = line.chomp
+    if line != '' and line[0] != '#' then
+        line.split.each{|token|
+            buf << token
+        }
+    end
+}
+
+# parse
+
+file_type = buf.shift
+width = buf.shift.to_i
+height = buf.shift.to_i
+col_size = buf.shift.to_i
+f = []
+
+height.times {|i|
+    f[i] = []
+    width.times {|j|
+        r = buf.shift.to_i
+        g = buf.shift.to_i
+        b = buf.shift.to_i
+        f[i] << [r, g, b]
+    }
+}
+
+# debug print
+
+STDERR.puts <<EOM
+#{width}x#{height} image, \
+#{size}x#{size} patch, \
+#{mode == MODE_MAX ? "max" : mode == MODE_MIN ? "min" : "avg"}-pooling
+EOM
+
+# pooling
+
+for i_ in (0...height).step(size)
+    for j_ in (0...width).step(size)
+        batch = []
+        pixels = []
+        for i in i_...(i_ + size)
+            for j in j_...(j_ + size)
+                next if i < 0 or j < 0 or i >= height or j >= width
+                pixels << f[i][j]
+                batch << [i, j]
+            end
+        end
+
+        m = mean(pixels, mode)
+
+        for i, j in batch
+            f[i][j] = m
+        end
+    end
+end
+
+# write
+
+puts file_type
+puts "#{width} #{height} #{col_size}"
+
+height.times {|i|
+    width.times {|j|
+        puts f[i][j].join(' ')
+    }
+}
