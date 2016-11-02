@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 
-require 'date'
+require 'time'
 
 if ARGV.size < 2
   STDERR.puts <<-HELP
@@ -10,7 +10,7 @@ NAME
 SYNOPSIS
     atq <time> <command [args]>
 
-    <time> written to be parsed as DateTime in Ruby
+    <time> written to be parsed as Time in Ruby
     <command [args]> will run at the time
     atq is running until <command> at foregrand
 
@@ -26,31 +26,31 @@ EXAMPLE
 HELP
   exit 0
 end
-time = DateTime.parse ARGV[0] + "+09:00"
+
+if /^\d{10,10}$/ =~ ARGV[0]
+    time = ARGV[0].to_i
+else
+    time = Time.parse(ARGV[0] + "+09:00").to_i
+end
+
 work = ARGV[1..-1].join ' '
 
-if time < DateTime.now
-  puts "#{time} is past"
-  exit 0
+if time < Time.now.to_i
+    puts "#{time} is past"
+    exit 0
 end
 
 def iter(time, work)
-  now = DateTime.now
+    now = Time.now.to_i
 
-  if now >= time
-    STDERR.puts work
-    puts `#{work}`
-    exit 0
-  else
-    w = (time - now) * 24 * 60 * 60
-    w = w.to_f
-    w *= 0.95
-    eps = 0.1
-    w = eps if w < eps
-    sleep w
-    iter time, work
-  end
+    if now >= time
+        puts `#{work}`
+        exit 0
+    else
+        w = [0.01, 0.95 * (time - now)].max
+        sleep w
+        iter time, work
+    end
 end
 
-STDERR.puts "#{time}"
 iter time, work
