@@ -25,7 +25,7 @@ end
 def cat(fn)
 
   `: > /tmp/tmp.pgm`
-  `convert -geometry #{$options[:geometry]}! -compress none #{fn} /tmp/tmp.pgm`
+  `convert -geometry #{$options[:geometry]} -compress none #{fn} /tmp/tmp.pgm`
 
   w, h = -1, -1
   bitmap = []
@@ -50,9 +50,11 @@ def cat(fn)
   m = bitmap.max + 1
   m = m.to_f
 
-  for i in 0...bitmap.size do
-    STDOUT.print char(bitmap[i] / m)
-    STDOUT.puts "" if i % w == w - 1
+  for i in (0...h).step(2)
+      for j in 0...w
+          STDOUT.print char(bitmap[i * w + j] / m)
+      end
+      STDOUT.puts ""
   end
 end
 
