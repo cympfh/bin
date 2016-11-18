@@ -37,7 +37,7 @@ work = ARGV[1..-1].join ' '
 
 if time < Time.now.to_i
     puts "#{time} is past"
-    exit 0
+    exit 1
 end
 
 def iter(time, work)
