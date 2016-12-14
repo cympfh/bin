@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TODO_ACCOUNT=cupfh
+TODO_ACCOUNT=dympfh
 CURRENT_ACCOUNT=$( tw-ls | grep -B 1 '(default)' | head -1 )
 
 usage() {
