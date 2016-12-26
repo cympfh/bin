@@ -21,7 +21,7 @@ plain() {
     # 20160404T003000
     echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
     echo " $b"
-  done
+  done | sort
 }
 
 color() {
@@ -34,7 +34,7 @@ color() {
     # 20160404T003000
     echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\x1b[32m\1/\2/\3 \4:\5\x1b[0m,g'
     printf " \x1b[34m$b\x1b[0m\n"
-  done
+  done | sort
 }
 
 if [ $# -eq 0 ]; then
