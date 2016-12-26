@@ -7,6 +7,10 @@ EOM
     exit 0
 }
 
+unwords() {
+    echo "$@" | tr ' ' '_'
+}
+
 if [ $# -eq 0 -o "_$1" = "_-h" -o "_$1" = "_--help" ]; then
     usage
 fi
@@ -18,13 +22,14 @@ mkdir $DIR
 
 # argparse
 OUTPUT="--trust-server-names"
-if [ "_$1" = "_-S" ]; then
-    case $2 in
+if [ "_$1" = "_-S" -o "_$1" = "_-s" ]; then
+    S=$(unwords $2)
+    case $S in
         *.pdf )
-            OUTPUT="-O $DIR/$2"
+            OUTPUT="-O $DIR/$S"
             ;;
         * )
-            OUTPUT="-O $DIR/$2.pdf"
+            OUTPUT="-O $DIR/$S.pdf"
             ;;
     esac
     shift
