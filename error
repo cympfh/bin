@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+
+def usage
+  puts <<EOM
+error:
+read x and y data, then output average-y, min-y and max-y for each x
+EOM
+  exit 0
+end
+
+groups = {}
+readlines.each do |line|
+  x, y = line.chomp.split
+  next unless x && y
+  x = x.to_f
+  y = y.to_f
+  if groups[x]
+    groups[x] << y
+  else
+    groups[x] = [y]
+  end
+end
+
+groups.each do |x, ys|
+  av = ys.inject(:+) / ys.size.to_f
+  puts "#{x} #{av} #{ys.min} #{ys.max}"
+end
