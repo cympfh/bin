@@ -2,7 +2,7 @@
 
 usage() {
     cat << EOM
-Usage: kindle [-S <name>] <pdf-url>
+Usage: kindle [-S <name>] [--convert] <pdf-url>
 EOM
     exit 0
 }
@@ -16,37 +16,54 @@ if [ $# -eq 0 -o "_$1" = "_-h" -o "_$1" = "_--help" ]; then
 fi
 
 TO=cympfh_40@kindle.com
-DIR=`mktemp -d`
-rm -rf $DIR
-mkdir $DIR
+DIR=$(mktemp -d)
+rm -rf "$DIR"
+mkdir "$DIR"
 
 # argparse
 OUTPUT="--trust-server-names"
-if [ "_$1" = "_-S" -o "_$1" = "_-s" ]; then
-    S=$(unwords $2)
-    case $S in
-        *.pdf )
-            OUTPUT="-O $DIR/$S"
+SUBJECT=""
+
+while [ "_$1" != "_" ]; do
+    case $1 in
+
+        # pdf name
+        -s | -S )
+            S=$(unwords "$2")
+            case $S in
+                *.pdf )
+                    OUTPUT="-O $DIR/$S"
+                    ;;
+                * )
+                    OUTPUT="-O $DIR/$S.pdf"
+                    ;;
+            esac
+            shift
+            shift
             ;;
+
+        # convert to .azw
+        --convert | -C )
+            SUBJECT=convert
+            shift
+            ;;
+
         * )
-            OUTPUT="-O $DIR/$S.pdf"
-            ;;
+            URL=$1
+            shift
     esac
-    shift
-    shift
-fi
+done
 
 # fetch
-URL=$1
 echo "download from $URL"
 UA='Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0'
-wget -P "$DIR" -U "$UA" $OUTPUT $URL
+wget -P "$DIR" -U "$UA" $OUTPUT "$URL"
 
 # sendmail
 for f in $DIR/*.pdf; do
     echo "sending $f"
-    mutt -s "" "$TO" -a "$f" <<< "Ok, Amazon"
+    mutt -s "$SUBJECT" "$TO" -a "$f" <<< "Ok, Amazon"
     break
 done
 
-rm -rf $DIR
+rm -rf "$DIR"
