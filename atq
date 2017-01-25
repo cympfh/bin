@@ -2,17 +2,20 @@
 
 require 'time'
 
-if ARGV.size < 2
+def usage
   STDERR.puts <<-HELP
 NAME
     atq -- easy crontab
 
 SYNOPSIS
-    atq <time> <command [args]>
+    atq [options] <time> <command [args]>
 
     <time> written to be parsed as Time in Ruby
     <command [args]> will run at the time
     atq is running until <command> at foregrand
+
+OPTIONS
+    -v, --verbose
 
 EXAMPLE
     atq 23:36 date
@@ -27,30 +30,53 @@ HELP
   exit 0
 end
 
-if /^\d{10,10}$/ =~ ARGV[0]
-    time = ARGV[0].to_i
-else
-    time = Time.parse(ARGV[0] + "+09:00").to_i
+usage if ARGV[0] == '-h' || ARGV[0] == '--help'
+
+verbose = false
+time = nil
+command = nil
+
+while ARGV.size > 0
+  case ARGV[0]
+  when '-v', '--verbose'
+    verbose = true
+    ARGV.shift
+  else
+    if time
+      command = ARGV[0..-1].join ' '
+      ARGV.clear
+    else
+      # time parse
+      if /^\d{10,10}$/ =~ ARGV[0]
+          time = ARGV[0].to_i
+      else
+          time = Time.parse(ARGV[0] + "+09:00").to_i
+      end
+      ARGV.shift
+    end
+  end
 end
 
-work = ARGV[1..-1].join ' '
+if verbose
+  puts "schedule at #{Time.at time}: #{command}"
+end
 
 if time < Time.now.to_i
-    puts "#{time} is past"
-    exit 1
+  puts "#{Time.at time} is past"
+  exit 1
 end
 
-def iter(time, work)
-    now = Time.now.to_i
+def iter(time, command)
+  now = Time.now.to_i
 
-    if now >= time
-        puts `#{work}`
-        exit 0
-    else
-        w = [0.01, 0.95 * (time - now)].max
-        sleep w
-        iter time, work
-    end
+  if now >= time
+    puts `#{command}`
+    exit 0
+  else
+    w = [0.01, 0.95 * (time - now)].max
+    sleep w
+    iter time, command
+  end
 end
 
-iter time, work
+iter time, command
