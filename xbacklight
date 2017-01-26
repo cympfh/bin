@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# coding: utf-8
+
+br = `[ -f ~/.xbacklight ] && cat ~/.xbacklight || echo 0.9`.to_f
+
+def update br
+  br = [0.001, [1.0, br].min].max
+  `xrandr --output DP1 --brightness #{br}`
+  `echo #{br} > ~/.xbacklight`
+end
+
+if ARGV[0] == '=' then
+  update ARGV[1].to_f / 100.0
+elsif ARGV[0] == '+' then
+  update br + ARGV[1].to_f / 100.0
+elsif ARGV[0] == '-' then
+  update br - ARGV[1].to_f / 100.0
+else
+  p (br * 100)
+end
+
