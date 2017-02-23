@@ -32,11 +32,9 @@ pause mouse close
 """.format(plot_line)
 
 
-def load(d1, d2):
+def load(d1='\t', d2=' '):
     labels = []
     X = []
-    d1 = '\t'
-    d2 = ' '
     for line in sys.stdin:
         fs = line.strip().split(d1)
         label = shorten(fs[0])
