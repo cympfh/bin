@@ -16,7 +16,7 @@ EOM
 }
 
 N=5
-I=5
+I=2
 pattern=
 
 
@@ -47,7 +47,7 @@ fi
 
 for _ in $(seq "$N"); do
     while :; do
-        sleep "$I"
         pgrep "$pattern" >/dev/null || break
+        sleep "$I"
     done
 done
