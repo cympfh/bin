@@ -36,7 +36,10 @@ def load(d1, d2, short):
     labels = []
     X = []
     for line in sys.stdin:
-        fs = line.strip().split(d1)
+        line = line.strip()
+        if line[0] == '#':
+            continue
+        fs = line.split(d1)
         label = fs[0]
         if short:
             label = shorten(label)
