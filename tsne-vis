@@ -32,14 +32,16 @@ pause mouse close
 """.format(plot_line)
 
 
-def load(d1, d2):
+def load(d1, d2, short):
     labels = []
     X = []
     d1 = '\t'
     d2 = ' '
     for line in sys.stdin:
         fs = line.strip().split(d1)
-        label = shorten(fs[0])
+        label = fs[0]
+        if short:
+            label = shorten(label)
         rest = d1.join(fs[1:])
         vect = [float(x) for x in rest.split(d2)]
         labels.append(label)
@@ -59,9 +61,10 @@ def tsne(X, dim=2):
 @click.option('-c', default=' ', help='deliminator for the vector')
 @click.option('--dim', default=2, type=click.IntRange(2, 3))
 @click.option('--output', '-o', help='When no --output is specified, run gnuplot/Qt directly')
-def main(d, c, dim, output):
+@click.option('--short/--no-short', default=False, help='shoten long labels')
+def main(d, c, dim, output, short):
 
-    labels, X = load(d, c)
+    labels, X = load(d, c, short)
     X = tsne(X, dim)
 
     if output is None:
