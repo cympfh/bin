@@ -35,8 +35,6 @@ pause mouse close
 def load(d1, d2, short):
     labels = []
     X = []
-    d1 = '\t'
-    d2 = ' '
     for line in sys.stdin:
         fs = line.strip().split(d1)
         label = fs[0]
