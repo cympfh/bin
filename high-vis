@@ -7,6 +7,7 @@ import tempfile
 import click
 import numpy
 from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 
 def shorten(label):
@@ -57,16 +58,29 @@ def tsne(X, dim=2):
     return X
 
 
+def pca(X, dim=2):
+    numpy.set_printoptions(suppress=True)
+    X = PCA(n_components=dim, whiten=True).fit_transform(X)
+    return X
+
+
 @click.command()
 @click.option('-d', default='\t', help='deliminator between the label and its vector')
 @click.option('-c', default=' ', help='deliminator for the vector')
 @click.option('--dim', default=2, type=click.IntRange(2, 3))
+@click.option('--method', default='tsne', type=click.Choice(['tsne', 'pca']))
 @click.option('--output', '-o', help='When no --output is specified, run gnuplot/Qt directly')
 @click.option('--short/--no-short', default=False, help='shoten long labels')
-def main(d, c, dim, output, short):
+def main(d, c, dim, method, output, short):
 
     labels, X = load(d, c, short)
-    X = tsne(X, dim)
+
+    if method == 'tsne':
+        X = tsne(X, dim)
+    elif method == 'pca':
+        X = pca(X, dim)
+    else:
+        raise
 
     if output is None:
         dat = tempfile.NamedTemporaryFile(mode='w')
