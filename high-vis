@@ -52,6 +52,13 @@ def load(d1, d2, short):
     return labels, X
 
 
+def normalize(X):
+    import numpy.linalg
+    for i in range(len(X)):
+        X[i] /= numpy.linalg.norm(X[i])
+    return X
+
+
 def tsne(X, dim=2):
     numpy.set_printoptions(suppress=True)
     X = TSNE(n_components=dim).fit_transform(X)
@@ -69,11 +76,16 @@ def pca(X, dim=2):
 @click.option('-c', default=' ', help='deliminator for the vector')
 @click.option('--dim', default=2, type=click.IntRange(2, 3))
 @click.option('--method', default='tsne', type=click.Choice(['tsne', 'pca']))
+@click.option('--norm/--no-norm', default=False,
+              help='normalize each vectors (this can compute cos instead of L2)')
 @click.option('--output', '-o', help='When no --output is specified, run gnuplot/Qt directly')
 @click.option('--short/--no-short', default=False, help='shoten long labels')
-def main(d, c, dim, method, output, short):
+def main(d, c, dim, method, norm, output, short):
 
     labels, X = load(d, c, short)
+
+    if norm:
+        X = normalize(X)
 
     if method == 'tsne':
         X = tsne(X, dim)
