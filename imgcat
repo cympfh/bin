@@ -343,9 +343,9 @@ def cat(path, options)
         print gray_char(gray_bitmap[idx] / gray_max)
       end
     end
+    print "\e[0m" if options[:color]
     puts ''
   end
-  print "\e[0m" if options[:color]
 end
 
 options = { geometry: '80x80', color: false, colors: colors }
