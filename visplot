@@ -24,10 +24,11 @@ def follow(f, interval):
 @click.option('--title')
 @click.option('--x-label')
 @click.option('--y-label')
+@click.option('--smoothing', default=0, type=int, help='Simple Moving Average with recent N items')
 @click.option('--interval', '-i', default=-1, type=int,
               help='plot auto-refresh interval (sec); When this is negative, refresh is disabled (default=-1)')
 @click.argument('logpath')
-def main(x, y, title, x_label, y_label, interval, logpath):
+def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
 
     def get_x(item, idx):
         if x == 'index':
@@ -40,6 +41,11 @@ def main(x, y, title, x_label, y_label, interval, logpath):
 
     Y = numpy.array([[item[key] for key in y] for item in data])
     X = numpy.array([[get_x(item, idx) for key in y] for idx, item in enumerate(data)])
+
+    if smoothing > 0:
+        for i in range(smoothing, len(Y)):
+            for j in range(len(Y[0])):
+                Y[i][j] = numpy.sum(Y[i - smoothing + 1: i + 1, j]) / smoothing
 
     plot = Visdom()
     opts = {'legend': y}
