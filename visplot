@@ -46,7 +46,7 @@ def main(x, y, title, x_label, y_label, interval, logpath):
     if title:
         opts['title'] = title
     if x_label:
-        opts['ylabel'] = x_label
+        opts['xlabel'] = x_label
     if y_label:
         opts['ylabel'] = y_label
     win = plot.line(Y, X, opts=opts)
