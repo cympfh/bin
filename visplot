@@ -46,6 +46,7 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
         for i in range(smoothing, len(Y)):
             for j in range(len(Y[0])):
                 Y[i][j] = numpy.sum(Y[i - smoothing + 1: i + 1, j]) / smoothing
+        last_Y = Y[-smoothing:, :]
 
     plot = Visdom()
     opts = {'legend': y}
@@ -66,6 +67,9 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
             data = json.loads(line)
             X = numpy.array([[get_x(data, N + 1) for key in y]])
             Y = numpy.array([[data[key] for key in y]])
+            if smoothing > 0:
+                last_Y = numpy.vstack((last_Y, Y))[-smoothing:, :]
+                Y = numpy.mean(last_Y, axis=0).reshape((1, -1))
             N += 1
             plot.line(Y, X, win=win, update='append')
             print('append', data)
