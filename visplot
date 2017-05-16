@@ -43,10 +43,13 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
     X = numpy.array([[get_x(item, idx) for key in y] for idx, item in enumerate(data)])
 
     if smoothing > 0:
-        for i in range(smoothing, len(Y)):
-            for j in range(len(Y[0])):
-                Y[i][j] = numpy.sum(Y[i - smoothing + 1: i + 1, j]) / smoothing
         last_Y = Y[-smoothing:, :]
+        smoothed_Y = Y + 0.0
+        for i in range(smoothing):
+            smoothed_Y[i] = numpy.mean(Y[:i + 1, :], axis=0)
+        for i in range(smoothing, len(Y)):
+            smoothed_Y[i] = numpy.mean(Y[i - smoothing + 1: i + 1, :], axis=0)
+        Y = smoothed_Y
 
     plot = Visdom()
     opts = {'legend': y}
