@@ -1,0 +1,2 @@
+#!/bin/bash
+nvidia-smi | grep Default | awk '{print $9}' | cat -n | grep '0MiB' | head -1 | awk '{print $1 - 1}'

@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+
+import json
+import time
+
+import click
+import numpy
+from visdom import Visdom
+
+
+def follow(f, interval):
+    f.seek(0, 2)
+    while True:
+        line = f.readline()
+        if not line:
+            time.sleep(interval)
+            continue
+        yield line
+
+
+@click.command()
+@click.option('-x', default='index', help='x-axis key; `index` is a special key')
+@click.option('-y', required=True, help='y-axis keys; multiple keys can be specified by comma-split')
+@click.option('--title')
+@click.option('--x-label')
+@click.option('--y-label')
+@click.option('--smoothing', default=0, type=int, help='Simple Moving Average with recent N items')
+@click.option('--interval', '-i', default=-1, type=int,
+              help='plot auto-refresh interval (sec); When this is negative, refresh is disabled (default=-1)')
+@click.argument('logpath')
+def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
+
+    def get_x(item, idx):
+        if x == 'index':
+            return idx
+        return item[x]
+
+    y = y.split(',')
+    data = [json.loads(line) for line in open(logpath)]
+    title = title if title else logpath
+
+    Y = numpy.array([[item[key] for key in y] for item in data])
+    X = numpy.array([[get_x(item, idx) for key in y] for idx, item in enumerate(data)])
+
+    if smoothing > 0:
+        last_Y = Y[-smoothing:, :]
+        smoothed_Y = Y + 0.0
+        for i in range(min(smoothing, len(Y))):
+            smoothed_Y[i] = numpy.mean(Y[:i + 1, :], axis=0)
+        for i in range(smoothing, len(Y)):
+            smoothed_Y[i] = numpy.mean(Y[i - smoothing + 1: i + 1, :], axis=0)
+        Y = smoothed_Y
+
+    plot = Visdom()
+    opts = {'legend': y}
+    if title:
+        opts['title'] = title
+    if x_label:
+        opts['xlabel'] = x_label
+    if y_label:
+        opts['ylabel'] = y_label
+    win = plot.line(Y, X, opts=opts)
+
+    if interval <= 0:
+        return
+
+    N = len(data)
+    with open(logpath, 'r') as f:
+        for line in follow(f, interval):
+            data = json.loads(line)
+            X = numpy.array([[get_x(data, N + 1) for key in y]])
+            Y = numpy.array([[data[key] for key in y]])
+            if smoothing > 0:
+                last_Y = numpy.vstack((last_Y, Y))[-smoothing:, :]
+                Y = numpy.mean(last_Y, axis=0).reshape((1, -1))
+            N += 1
+            plot.line(Y, X, win=win, update='append')
+            print('append', data)
+
+
+if __name__ == '__main__':
+    main()
