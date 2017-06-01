@@ -22,92 +22,92 @@ HELP
   exit 0
 end
 
-index = nil
-$DIR = nil
-$A=30 # in default
-$B=0
-color = false
-html = false
-standalone = false
-
-# parse args
-ARGV.length.times {|i|
-  arg = ARGV[i]
-  if arg == nil or arg == "-h" or arg == "-?" or arg == "--help"
-    usage
-  elsif arg == "-A"
-    $A = ARGV[i+1].to_i
-    i += 1
-  elsif arg == "-B"
-    $B = ARGV[i+1].to_i
-    i += 1
-  elsif arg == "-f"
-    index = File.basename ARGV[i+1]
-    $DIR = File.dirname ARGV[i+1]
-    i += 1
-  elsif arg == "-c" or arg == "--color"
-    color = true
-  elsif arg == "-s"
-    standalone = true
-  elsif arg == "--html"
-    html = true
-  end
-}
-
-if index == nil
-  usage
-end
-
-# collection of [ Date, SrcFile, Content ]
-$DICT = []
-
 # read and trace
-def read(file)
-  lines = File.read($DIR + '/' + file).chomp.split("\n")
-  for line in lines
+def read(file, dir)
+  dict = []
+  File.read(dir + '/' + file).chomp.split("\n").each do |line|
     line = line.chomp
     # ignore line
-    if line == "" or line.index("//") == 0
+    if line == '' || line.start_with?('//')
     # #include
-    elsif line.index("#") == 0
-      if /<[^>]*>/.match(line) == nil
+    elsif line.start_with? '#'
+      if /<[^>]*>/.match(line).nil?
         STDERR.puts "parse error(0): #{line} in #{file}"
       else
         subfile = /<[^>]*>/.match(line)[0][1...-1]
-        read subfile
+        dict += read(subfile, dir)
       end
     # date line
     else
-      res = false
-      if (res = /^(.*)\t(.*)$/.match line) != nil
+      res = /^(.*)\t(.*)$/.match line
+      if res
         date = Date.parse(res[1])
         content = res[2]
-        $DICT << [date, file, content]
+        dict << [date, file, content]
       else
         STDERR.puts "parse error(1): #{line} in #{file}"
       end
     end
   end
+  dict
 end
+
+# parse args
+index = nil
+dir = nil
+days_after = 30 # in default
+days_before = 0
+color = false
+html = false
+standalone = false
+
+ARGV.length.times do |i|
+  arg = ARGV[i]
+  if arg.nil? || arg == '-h' || arg == '-?' || arg == '--help'
+    usage
+  elsif arg == '-A'
+    days_after = ARGV[i + 1].to_i
+  elsif arg == '-B'
+    days_before = ARGV[i + 1].to_i
+  elsif arg == '-f'
+    index = File.basename ARGV[i + 1]
+    dir = File.dirname ARGV[i + 1]
+  elsif arg == '-c' || arg == '--color'
+    color = true
+  elsif arg == '-s'
+    standalone = true
+  elsif arg == '--html'
+    html = true
+  end
+end
+
+usage if index.nil?
 
 #
 # main
 #
-read(index)
+
+# collection of [ Date, SrcFile, Content ]
+dict = read(index, dir)
 
 colhash = {}
-$DICT.sort!
-from = Date.today - 1 - $B
-to = Date.today + $A
+dict.sort!
+from = Date.today - 1 - days_before
+to = Date.today + days_after
 
-URL_REGEXP = /https?:\/\/[0-9A-Za-z_\/:%#\$&\?\(\)~\.=\+\-]+/
+URL_REGEXP = %r{https?://[0-9A-Za-z_/:%#\$&\?\(\)~\.=\+\-]+}
 
 # html header
-if html and standalone
+if html && standalone
   puts <<EOM
 <title>calendar</title>
 <style>
-  @font-face {font-family:'Josefin Sans';font-style:normal;font-weight:400;src: local('Josefin Sans'),local('JosefinSans'),url(https://fonts.gstatic.com/s/josefinsans/v9/xgzbb53t8j-Mo-vYa23n5ugdm0LZdjqr5-oayXSOefg.woff2) format('woff2');}
+  @font-face {
+    font-family:'Josefin Sans';
+    font-style:normal;
+    font-weight:400;
+    src: local('Josefin Sans'),local('JosefinSans'),url(https://fonts.gstatic.com/s/josefinsans/v9/xgzbb53t8j-Mo-vYa23n5ugdm0LZdjqr5-oayXSOefg.woff2) format('woff2');
+  }
   body{font-size:2.0em;font-family:'Josefin Sans'}
   dt{color:#338833;}
 </style>
@@ -115,28 +115,21 @@ if html and standalone
 EOM
 end
 
-for d in $DICT do
+# body
+dict.each do |d|
   date, src, content = d
-  if date > from and date <= to
-    if (color == false) and (html == false)
-      puts "#{date} (#{date.strftime('%a')})   #{content}"
-    elsif html
-      content = content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "<a href='\\&'>\\&</a>")
-      if content.include? 'DONE'
-        content = "<s>#{content}\e</s>"
-      end
-      puts "<DT>#{date} (#{date.strftime('%a')})</DT><DD>#{content}</DD>"
-    elsif color
-      delimiter = ' '
-      if colhash[src] == nil
-        colhash[src] = (colhash.size) % 7
-      end
-      delimiter = "\e[4#{colhash[src]+1}m \e[0m"
-      if content.include? 'DONE'
-        content = "\e[90m#{content}\e[0m"
-      end
-      puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(URL_REGEXP, "\e[4;34m\\&\e[0m")}"
-    end
+  date_str = date.strftime('%a')
+  next if date <= from || date > to
+  if (color == false) && (html == false)
+    puts "#{date} (#{date.strftime('%a')})   #{content}"
+  elsif html
+    content = content.gsub(URL_REGEXP, "<a href='\\&'>\\&</a>")
+    content = "<s>#{content}\e</s>" if content.include? 'DONE'
+    puts "<DT>#{date} (#{date_str})</DT><DD>#{content}</DD>"
+  elsif color
+    colhash[src] = colhash.size % 7 if colhash[src].nil?
+    delimiter = "\e[4#{colhash[src] + 1}m \e[0m"
+    content = "\e[90m#{content}\e[0m" if content.include? 'DONE'
+    puts "\e[32m#{date}\e[0m (\e[33m#{date_str}\e[0m) #{delimiter} #{content.gsub(URL_REGEXP, "\e[4;34m\\&\e[0m")}"
   end
 end
-
