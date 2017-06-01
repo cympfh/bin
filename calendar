@@ -100,6 +100,8 @@ $DICT.sort!
 from = Date.today - 1 - $B
 to = Date.today + $A
 
+URL_REGEXP = /https?:\/\/[0-9A-Za-z_\/:%#\$&\?\(\)~\.=\+\-]+/
+
 # html header
 if html and standalone
   puts <<EOM
@@ -133,7 +135,7 @@ for d in $DICT do
       if content.include? 'DONE'
         content = "\e[90m#{content}\e[0m"
       end
-      puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(/http[:\.\/a-zA-Z0-9\?\=\-]*/, "\e[4;34m\\&\e[0m")}"
+      puts "\e[32m#{date}\e[0m (\e[33m#{date.strftime('%a')}\e[0m) #{delimiter} #{content.gsub(URL_REGEXP, "\e[4;34m\\&\e[0m")}"
     end
   end
 end
