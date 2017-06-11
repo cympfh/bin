@@ -1,0 +1,72 @@
+#!/bin/bash
+
+usage() {
+    cat << EOM
+Usage: gender <name>
+EOM
+    exit 0
+}
+
+#
+# resouces
+# TODO: add more resouces and make decide by voting
+#
+
+weblio() {
+    NAME="$1"
+    KEYWORD="性別"
+    curl -s "http://www.weblio.jp/content/$NAME" |
+    grep Tltdbtitle |
+    grep "$KEYWORD" | head -1 | sed "s/${KEYWORD}//g" |
+    sed 's/<[^>]*>//g'
+}
+
+wikipedia-category() {
+    curl -s "https://ja.wikipedia.org/wiki/$1" | grep -o '"Category:[^"]*"' | grep -o '\(男\|女\)性'
+}
+
+wikipedia-body() {
+    curl -s "https://ja.wikipedia.org/wiki/$1" | grep -o '\(男\|女\)性' | vote
+}
+
+resources="weblio wikipedia-category wikipedia-body"
+
+#
+# entry
+#
+
+vote() {
+    grep -v '^$' |
+    sort | uniq -c | sort -n |
+    tail -1 | awk '{print $2}'
+}
+
+main() {
+    NAME="$(echo $@ | tr -d ' ')"
+    for resource in $resources; do
+      $resource "$NAME"
+    done | vote
+}
+
+debug() {
+    NAME="$(echo $@ | tr -d ' ')"
+    echo "# search with $NAME"
+    for resource in $resources; do
+      echo "## $resource"
+      $resource "$NAME"
+    done
+}
+
+if [ $# -eq 0 -o "_$1" = "_-h" -o "_$1" = "_--help" ]; then
+    usage
+fi
+
+case "$1" in
+  -v | --verbose | --debug )
+    shift
+    debug "$@"
+    ;;
+  * )
+    main "$@"
+    ;;
+esac
