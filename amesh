@@ -6,12 +6,17 @@ if [ $# -eq 1 ]; then
     OUT=$1
 fi
 
-wget -O /tmp/map.jpg http://tokyo-ame.jwa.or.jp/map/map000.jpg
-wget -O /tmp/mask.png http://tokyo-ame.jwa.or.jp/map/msk000.png
-URL="http://tokyo-ame.jwa.or.jp/mesh/000/$(date "+%Y%m%d%H")$(printf "%02d" $(( $(date "+%M") / 5 * 5))).gif"
-wget -O /tmp/cloud.gif "$URL"
-convert /tmp/map.jpg /tmp/mask.png -compose over -composite /tmp/tokyo.jpg
-convert /tmp/tokyo.jpg /tmp/cloud.gif -compose over -composite $OUT
+MAP=/tmp/map.jpg
+MASK=/tmp/mask.png
+CLOUD=/tmp/cloud.gif
 
-rm /tmp/map.jpg /tmp/mask.png /tmp/cloud.gif /tmp/tokyo.jpg
+wget -O $MAP http://tokyo-ame.jwa.or.jp/map/map000.jpg
+wget -O $MASK http://tokyo-ame.jwa.or.jp/map/msk000.png
+CLOUD_URL="http://tokyo-ame.jwa.or.jp/mesh/000/$(date "+%Y%m%d%H")$(printf "%02d" $(( ( $(date "+%M") - 1 ) / 5 * 5))).gif"
+wget -O $CLOUD "$CLOUD_URL"
+
+convert $MAP $CLOUD -compose over -composite /tmp/amesh_tmp.jpg
+convert /tmp/amesh_tmp.jpg $MASK -compose over -composite $OUT
+
+rm $MAP $MASK $CLOUD /tmp/amesh_tmp.jpg
 echo "$OUT generated" >&2
