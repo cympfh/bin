@@ -45,7 +45,7 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
     if smoothing > 0:
         last_Y = Y[-smoothing:, :]
         smoothed_Y = Y + 0.0
-        for i in range(smoothing):
+        for i in range(min(smoothing, len(Y))):
             smoothed_Y[i] = numpy.mean(Y[:i + 1, :], axis=0)
         for i in range(smoothing, len(Y)):
             smoothed_Y[i] = numpy.mean(Y[i - smoothing + 1: i + 1, :], axis=0)

@@ -19,9 +19,9 @@ def shorten(label):
 
 def gnuplot_template(dim):
     if dim == 2:
-        plot_line = 'plot \"{}\" using 1:2:3 with labels notitle boxed center'
+        plot_line = 'plot \"{}\" using 1:2:3 with labels notitle boxed center font ",16"'
     else:
-        plot_line = 'splot \"{}\" using 1:2:3:4 with labels notitle boxed center'
+        plot_line = 'splot \"{}\" using 1:2:3:4 with labels notitle boxed center font ",15"'
 
     return """
 set terminal qt
