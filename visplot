@@ -18,6 +18,10 @@ def follow(f, interval):
         yield line
 
 
+def is_comment(line):
+    return line.strip()[0:2] == '//'
+
+
 @click.command()
 @click.option('-x', default='index', help='x-axis key; `index` is a special key')
 @click.option('-y', required=True, help='y-axis keys; multiple keys can be specified by comma-split')
@@ -36,7 +40,7 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
         return item[x]
 
     y = y.split(',')
-    data = [json.loads(line) for line in open(logpath)]
+    data = [json.loads(line) for line in open(logpath) if not is_comment(line)]
     title = title if title else logpath
 
     Y = numpy.array([[item[key] for key in y] for item in data])
