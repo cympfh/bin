@@ -2,6 +2,7 @@
 
 import json
 import time
+import re
 
 import click
 import numpy
@@ -19,7 +20,34 @@ def follow(f, interval):
 
 
 def is_comment(line):
-    return line.strip()[0:2] == '//'
+    return line[0] == '#' or line.strip()[0:2] == '//'
+
+
+def make_keys(data, key_names):
+    keys = []
+    all_keys = set()
+    for item in data:
+        for k in item:
+            all_keys.add(k)
+    for name in key_names:
+        if '*' in name:
+            pattern = re.compile(re.sub('\*', '.*', name))
+            for k in all_keys:
+                if pattern.fullmatch(k):
+                    keys.append(k)
+        elif name in all_keys:
+            keys.append(name)
+        else:
+            raise Exception('Unknown key: {}'.format(name))
+    return keys
+
+
+def get(item, key, index=0, na=0):
+    if key == 'index':
+        return index
+    if key in item:
+        return item[key]
+    return na
 
 
 @click.command()
@@ -34,17 +62,14 @@ def is_comment(line):
 @click.argument('logpath')
 def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
 
-    def get_x(item, idx):
-        if x == 'index':
-            return idx
-        return item[x]
-
-    y = y.split(',')
     data = [json.loads(line) for line in open(logpath) if not is_comment(line)]
     title = title if title else logpath
 
-    Y = numpy.array([[item[key] for key in y] for item in data])
-    X = numpy.array([[get_x(item, idx) for key in y] for idx, item in enumerate(data)])
+    x_key = x
+    y_keys = make_keys(data, y.split(','))
+
+    Y = numpy.array([[get(item, key, i) for key in y_keys] for i, item in enumerate(data)])
+    X = numpy.array([[get(item, x_key, i) for key in y_keys] for i, item in enumerate(data)])
 
     if smoothing > 0:
         last_Y = Y[-smoothing:, :]
@@ -56,7 +81,7 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
         Y = smoothed_Y
 
     plot = Visdom()
-    opts = {'legend': y}
+    opts = {'legend': y_keys}
     if title:
         opts['title'] = title
     if x_label:
@@ -71,13 +96,13 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
     N = len(data)
     with open(logpath, 'r') as f:
         for line in follow(f, interval):
+            N += 1
             data = json.loads(line)
-            X = numpy.array([[get_x(data, N + 1) for key in y]])
-            Y = numpy.array([[data[key] for key in y]])
+            X = numpy.array([[get(data, x_key, N) for key in y_keys]])
+            Y = numpy.array([[get(data, key, N) for key in y_keys]])
             if smoothing > 0:
                 last_Y = numpy.vstack((last_Y, Y))[-smoothing:, :]
                 Y = numpy.mean(last_Y, axis=0).reshape((1, -1))
-            N += 1
             plot.line(Y, X, win=win, update='append')
             print('append', data)
 
