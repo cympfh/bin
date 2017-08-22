@@ -1,21 +1,60 @@
 #!/usr/bin/env ruby
 # coding: utf-8
 
-br = `[ -f ~/.xbacklight ] && cat ~/.xbacklight || echo 0.9`.to_f
+def usage
+  puts <<EOM
+SYNOPSIS:
+  xbacklight [ -display <display> ] = <brightness>
+  xbacklight [ -display <display> ] + <brightness-diff>
+  xbacklight [ -display <display> ] - <brightness-diff>
 
-def update br
-  br = [0.001, [1.0, br].min].max
-  `xrandr --output DP1 --brightness #{br}`
-  `echo #{br} > ~/.xbacklight`
+NOTE:
+  This brightness should be Int in 0-100.
+EOM
+  exit 0
 end
 
-if ARGV[0] == '=' then
-  update ARGV[1].to_f / 100.0
-elsif ARGV[0] == '+' then
-  update br + ARGV[1].to_f / 100.0
-elsif ARGV[0] == '-' then
-  update br - ARGV[1].to_f / 100.0
-else
-  p (br * 100)
+def clip(x, sub, sup)
+  [sub, [sup, x].min].max
 end
 
+def update(display, brightness)
+  brightness = clip(brightness, 0.01, 1.0)
+  puts "set #{display} brightness = #{brightness}"
+  `xrandr --output #{display} --brightness #{brightness}`
+  `echo #{brightness} > ~/.xbacklight`
+end
+
+brightness = `[ -f ~/.xbacklight ] && cat ~/.xbacklight || echo 0.9`.to_f
+display = `xrandr | grep ' connected' | awk '{print $1}'`.chomp
+
+while ARGV.size > 0
+  case ARGV[0]
+  when '-h', '--help'
+    usage
+  when '-display'
+    display = ARGV[1]
+    ARGV.shift
+    ARGV.shift
+  when '='
+    x = ARGV[1].to_f / 100.0
+    brightness = x
+    ARGV.shift
+    ARGV.shift
+  when '+'
+    x = ARGV[1].to_f / 100.0
+    brightness += x
+    ARGV.shift
+    ARGV.shift
+  when '-'
+    x = ARGV[1].to_f / 100.0
+    brightness -= x
+    ARGV.shift
+    ARGV.shift
+  else
+    p (brightness * 100)
+    exit 0
+  end
+end
+
+update(display, brightness)
