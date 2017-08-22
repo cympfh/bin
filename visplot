@@ -38,7 +38,8 @@ def make_keys(data, key_names):
         elif name in all_keys:
             keys.append(name)
         else:
-            raise Exception('Unknown key: {}'.format(name))
+            click.echo('[Warn] unknown key {}, was ignored'.format(name), err=True)
+            # raise Exception('Unknown key: {}'.format(name))
     return keys
 
 
