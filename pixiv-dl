@@ -1,10 +1,28 @@
 #!/bin/bash
 
-URL=$1
+usage() {
+  cat << HELP
+NAME
+    pixiv-dl -- pixiv-dl
+
+SYNOPSIS
+    pixiv-dl <PHPSESSID> <URL>
+HELP
+  exit 0
+}
+
+
+if [ $# -ne 2 ]; then
+    usage
+fi
+
+PHPSESSID=$1
+URL=$2
+
 case $URL in
 
   *manga* )
-    curl -s "$URL" -H 'Cookie: PHPSESSID=4452325_1a94695c594dc91edf46ef6a88585b96; p_ab_id=0;' |
+    curl -s "$URL" -H "Cookie: PHPSESSID=$PHPSESSID; p_ab_id=0;" |
     sed 's/<img/\n<>/g' |
     grep -e '^<>' |
     grep ui-scroll-view |
@@ -13,7 +31,7 @@ case $URL in
     ;;
 
   *medium* )
-    curl -s "$URL" -H 'Cookie: PHPSESSID=4452325_1a94695c594dc91edf46ef6a88585b96; p_ab_id=0;' |
+    curl -s "$URL" -H "Cookie: PHPSESSID=$PHPSESSID; p_ab_id=0;" |
     sed 's/<img/\n<>/g' |
     grep -e '^<>' |
     grep original-image |
