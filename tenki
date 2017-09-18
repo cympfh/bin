@@ -31,7 +31,7 @@ forecast() {
     curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" > $TMP
     jq -r '"\(.city.name),\(.city.country)"' $TMP
     export -f k2c
-    jq -r '.list[] | "echo \(.dt_txt) $(k2c \(.main.temp)) \(.weather[0].main)"' $TMP |
+    jq -r '.list[] | "echo \(.dt_txt) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
     awk 'NR % 8 == 0' | bash |
     sed 's/^20[0-9]*-//g'
     rm $TMP
