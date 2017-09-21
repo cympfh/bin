@@ -1,0 +1,78 @@
+#!/bin/bash
+
+APPID=cc78d27e7519b67719a1121d90e67426
+
+#
+# helpers
+#
+
+k2c() {
+    awk "BEGIN { print int(($1 - 273.15) * 10) / 10 }"
+}
+
+current() {
+    LOC=$1
+    TMP=$(mktemp)
+    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" > $TMP
+    TEMP=$(k2c $(jq '.main.temp' $TMP))
+    TEMP_MIN=$(k2c $(jq '.main.temp_min' $TMP))
+    TEMP_MAX=$(k2c $(jq '.main.temp_max' $TMP))
+
+    jq -r '"\(.name),\(.sys.country)
+'$TEMP'°C ('$TEMP_MIN'°C/'$TEMP_MAX'°C)
+\(.main.pressure)hPa
+\(.weather[0].main) (\(.weather[0].description))"' $TMP
+    rm $TMP
+}
+
+forecast() {
+    LOC=$1
+    TMP=$(mktemp)
+    curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" > $TMP
+    jq -r '"\(.city.name),\(.city.country)"' $TMP
+    export -f k2c
+    jq -r '.list[] | "echo \(.dt_txt) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
+    awk 'NR % 8 == 0' | bash |
+    sed 's/^20[0-9]*-//g'
+    rm $TMP
+}
+
+#
+# usage
+#
+usage() {
+    cat <<EOD
+SYNOPSIS: tenki [-f] <City-name>
+OPTIONS:
+  -f  forecast
+EOD
+    exit 0
+}
+
+if [ "$1" == "--help" -o "$1" == "-h" ]; then
+    usage
+fi
+
+#
+# argsparse
+#
+FORECAST=0
+LOC=Tokyo
+while [ $# -gt 0 ]; do
+    case $1 in
+        -f )
+            FORECAST=1
+            shift
+            ;;
+        * )
+            LOC=$1
+            shift
+            ;;
+    esac
+done
+
+if [ $FORECAST -eq 0 ]; then
+    current $LOC
+else
+    forecast $LOC
+fi

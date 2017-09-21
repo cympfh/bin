@@ -9,7 +9,7 @@ SYNOPSIS:
   xbacklight [ -display <display> ] - <brightness-diff>
 
 NOTE:
-  This brightness should be Int in 0-100.
+  This brightness be specified by Int in 0-100, or Float in 0.0-1.0
 EOM
   exit 0
 end
@@ -25,6 +25,14 @@ def update(display, brightness)
   `echo #{brightness} > ~/.xbacklight`
 end
 
+def parse(str)
+  if str.to_f <= 1.0
+    clip(str.to_f, 0.0, 1.0)
+  else
+    clip(str.to_i / 100.0, 0.0, 1.0)
+  end
+end
+
 brightness = `[ -f ~/.xbacklight ] && cat ~/.xbacklight || echo 0.9`.to_f
 display = `xrandr | grep ' connected' | awk '{print $1}'`.chomp
 
@@ -37,17 +45,17 @@ while ARGV.size > 0
     ARGV.shift
     ARGV.shift
   when '='
-    x = ARGV[1].to_f / 100.0
+    x = parse(ARGV[1])
     brightness = x
     ARGV.shift
     ARGV.shift
   when '+'
-    x = ARGV[1].to_f / 100.0
+    x = parse(ARGV[1])
     brightness += x
     ARGV.shift
     ARGV.shift
   when '-'
-    x = ARGV[1].to_f / 100.0
+    x = parse(ARGV[1])
     brightness -= x
     ARGV.shift
     ARGV.shift
