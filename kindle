@@ -2,14 +2,17 @@
 
 usage() {
     cat << EOM
-Usage: kindle [-S <name>] [--convert] <pdf-url>
+Usage: kindle [-n] [-S <name>] [--convert] <pdf-url>
 
-Usage: kindle arxiv <abs-url>
+Usage: kindle [-n] arxiv <abs-url>
 
   The title and the pdf url are complemented automatically
 
   Example:
     kindle arxiv https://arxiv.org/abs/1201.01234
+
+Options:
+  -n    dry-run
 EOM
     exit 0
 }
@@ -39,6 +42,7 @@ mkdir "$DIR"
 OUTPUT="--trust-server-names"
 SUBJECT=""
 TARGET=""
+DRYRUN=0
 
 while [ "_$1" != "_" ]; do
     case $1 in
@@ -71,6 +75,11 @@ while [ "_$1" != "_" ]; do
             shift 2
             ;;
 
+        -n | --dry-run )
+            DRYRUN=1
+            shift
+            ;;
+
         * )
             TARGET=$1
             shift
@@ -84,7 +93,11 @@ case $TARGET in
         URL=$TARGET
         echo "download from $URL"
         UA='Mozilla/5.0 (X11; Linux x86_64; rv:30.0) Gecko/20100101 Firefox/30.0'
-        wget -P "$DIR" -U "$UA" $OUTPUT "$URL"
+        if [ $DRYRUN -eq 1 ]; then
+            echo wget -P "$DIR" -U "$UA" $OUTPUT "$URL"
+        else
+            wget -P "$DIR" -U "$UA" $OUTPUT "$URL"
+        fi
         for f in $DIR/*.pdf; do
             TARGET=$f
             break
@@ -96,6 +109,10 @@ esac
 
 # sendmail
 echo "sending $TARGET"
-mutt -s "$SUBJECT" "$TO" -a "$TARGET" <<< "Ok, Amazon"
+if [ $DRYRUN -eq 1 ]; then
+    echo mutt -s "$SUBJECT" "$TO" -a "$TARGET"
+else
+    mutt -s "$SUBJECT" "$TO" -a "$TARGET" <<< "Ok, Amazon"
+fi
 
 rm -rf "$DIR"
