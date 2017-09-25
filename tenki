@@ -10,6 +10,10 @@ k2c() {
     awk "BEGIN { print int(($1 - 273.15) * 10) / 10 }"
 }
 
+unix2locale() {
+    date --date "@$1" +"%m-%d %H:%M"
+}
+
 current() {
     LOC=$1
     TMP=$(mktemp)
@@ -31,8 +35,9 @@ forecast() {
     curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" > $TMP
     jq -r '"\(.city.name),\(.city.country)"' $TMP
     export -f k2c
-    jq -r '.list[] | "echo \(.dt_txt) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
-    awk 'NR % 4 == 1' | bash |
+    export -f unix2locale
+    jq -r '.list[] | "echo $(unix2locale \(.dt)) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
+    awk 'NR<5 || NR%8==1' | bash |
     sed 's/^20[0-9]*-//g'
     rm $TMP
 }
