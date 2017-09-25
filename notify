@@ -16,7 +16,7 @@ USAGE
   exit 0
 }
 
-while [ ! -z $1 ]; do
+while [ ! -z "$1" ]; do
   case $1 in
     --title | -title )
       TITLE=$2
