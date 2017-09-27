@@ -11,7 +11,11 @@ k2c() {
 }
 
 unix2locale() {
-    date --date "@$1" +"%m-%d %H:%M"
+    if [ $(uname) == "Darwin" ]; then
+        date -r "$1" +"%m-%d %H:%M"
+    else
+        date --date "@$1" +"%m-%d %H:%M"
+    fi
 }
 
 current() {
