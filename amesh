@@ -12,7 +12,7 @@ CLOUD=/tmp/cloud.gif
 
 wget -O $MAP http://tokyo-ame.jwa.or.jp/map/map000.jpg
 wget -O $MASK http://tokyo-ame.jwa.or.jp/map/msk000.png
-CLOUD_URL="http://tokyo-ame.jwa.or.jp/mesh/000/$(date "+%Y%m%d%H")$(printf "%02d" $(( ( $(date "+%M") - 1 ) / 5 * 5))).gif"
+CLOUD_URL="http://tokyo-ame.jwa.or.jp/mesh/000/$(date "+%Y%m%d%H")$(printf "%02d" $(( ( $(date "+%M") - 2 ) / 5 * 5))).gif"
 wget -O $CLOUD "$CLOUD_URL"
 
 convert $MAP $CLOUD -compose over -composite /tmp/amesh_tmp.jpg
