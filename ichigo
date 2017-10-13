@@ -1,107 +1,70 @@
 #!/bin/bash
 
-if [ $# -ne 1 ]; then
-  echo "SYNOPSIS: ichigo <html-file-name>"
-  echo "  If the file not exists, copy the current thread"
-  echo "  Else, append the current thread"
-  echo "SYNOPSIS: ichigo --img"
-  echo "  stdout image urls in the current thread"
-  exit 0
-fi
+usage() {
+    cat <<EOM
+USAGE
+    ichigo [options]
 
-IMGMODE=0 # default
-if [ $1 == '--img' ]; then
-  IMGMODE=1
-fi
-OUT=$1
-
-# name of the board (perfect match)
-BDNAME='ニュー速VIP'
-
-# name of the thread (perfect match)
-THNAME='苺ましまろ'
-
-# get board url ('http://viper.2ch.net/news4vip')
-BD=`curl -s http://menu.2ch.net/bbsmenu.html | nkf | grep ">${BDNAME}<" | sed 's/^.*HREF=\([^>]*\).*$/\1/'`
-echo BD $BD >&2 # http://viper.2ch.net/news4vip/
-if [ _$BD == _ ]; then
-  echo "Err BD" >&2
-  exit 1
-fi
-
-DOM=`echo $BD | cut -d '/' -f 3` ## viper.2ch.net
-BID=`echo $BD | cut -d '/' -f 4` ## news4vip
-echo DOM $DOM >&2
-echo BID $BID >&2
-
-echo ${BD}subject.txt
-TID=`curl -s ${BD}subject.txt | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1`
-echo TID $TID >&2
-
-if [ _$TID == _ ]; then
-  echo "Err TID" >&2
-  exit 1
-fi
-
-# get thread text
-echo http://${DOM}/test/read.cgi/${BID}/${TID} >&2
-
-THREAD=`mktemp`
-curl -s http://${DOM}/test/read.cgi/${BID}/${TID} | nkf > $THREAD
-
-if [ $IMGMODE -eq 1 ]; then
-  cat $THREAD | grep -o -e "http:[a-zA-Z0-9/.-]*jpg\|http:[a-zA-Z0-9/.-]*gif"
-  rm $THREAD
-  exit 0
-fi
-
-HEADER=`mktemp`
-BODY=`mktemp`
-FOOTER=`mktemp`
-
-cat << EOM > $FOOTER
-<script src="http://cympfh.cc/resources/js/echo.min.js"></script>
-<script>
-echo.init({
-  offset: 100,
-  throttle: 250,
-  unload: false,
-  callback: function (element, op) { }
-});
-</script>
-</body>
-</html>
+OPTIONS
+    --img    images only
 EOM
+    exit
+}
 
-cat << EOM > $HEADER
-<!DOCTYPE html>
-<html><head><title>苺ましまろ</title>
-<style>
-body { font-family: "YukarryAA"; }
-img { height: 25vw; }
-b { display: none; }
-</style>
-</head>
-<body>
-EOM
+## parse args
 
-if [ -f $OUT ]; then
-  cat $OUT | grep '^<!--' | sort -k2,3 -u > $BODY
+IMG=0
+
+while [ $# -gt 0 ]; do
+    case $1 in
+        --img )
+            IMG=1
+            shift
+            ;;
+        * )
+            usage
+            ;;
+    esac
+done
+
+MENU_URL=http://menu.2ch.net/bbsmenu.html
+BDNAME="ニュー速VIP"
+THNAME="苺ましまろ"
+
+# get board url (https://*.2ch.net/news4vip/)
+BD_URL=$(curl -s $MENU_URL | nkf | grep ">${BDNAME}<" | sed 's/^.*HREF=\([^>]*\).*$/\1/')
+
+DOM=$(echo "$BD_URL" | cut -d '/' -f 3) ## *.2ch.net
+BID=$(echo "$BD_URL" | cut -d '/' -f 4) ## news4vip
+
+# get thread url
+SUBJECT_URL="${BD_URL}subject.txt"
+TID=$(curl -s "$SUBJECT_URL" | nkf | grep "<>${THNAME} " | cut -d'<' -f1 | cut -d '.' -f1)
+TH_URL="http://${DOM}/test/read.cgi/${BID}/${TID}"
+
+# read
+TMP=$(mktemp)
+curl -sL "$TH_URL" | nkf > "$TMP"
+
+if [ $IMG -eq 1 ]; then
+    grep -o -e "http:[a-zA-Z0-9/.-]*\(jpg\|jpeg\|gif\)" "$TMP"
+    exit 0
 fi
 
-# filter posts html
-cat $THREAD | grep '^<dt' |
-grep -v 'Over 1000.*今から元カノに痛メする' |
-ruby -n -e 'date = $_.match(/[0-9]{4}\/[0-9]{2}\/[0-9]{2}/); time = $_.match(/[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{3}/); puts "<!-- #{date} #{time} --> #{$_}"' |
-sed 's,jump.2ch.net/?,,g' |
-sed 's/>\(http[^>]*\.jpg\)</><img src="" data-echo="\1"></g' |
-sed 's/>\(http[^>]*\.jpeg\)</><img src="" data-echo="\1"></g' |
-sed 's/>\(http[^>]*\.png\)</><img src="" data-echo="\1"></g' |
-sed 's/>\(http[^>]*\.gif\)</><img src="" data-echo="\1"></g' >> $BODY
+html-trim() {
+    sed 's,<div>,,g; s,</div>,,g; s,<span>,,g; s,</span>,,g' |
+    sed 's,<br>,\n,g' |
+    sed 's/<a href[^>]*>//g; s,</a>,,g'
+}
 
-# 最後
-cat $HEADER >$OUT
-cat $BODY | sort -k 2,3 -u >>$OUT
-cat $FOOTER >>$OUT
+html-unescape() {
+    sed 's/&gt;/>/g; s/&lt;/</g; s/&quot;/"/g'
+}
 
-rm $HEADER $BODY $FOOTER $THREAD
+cat "$TMP" |
+sed 's/<div class="post"/\n&/g' | grep '^<div class="post"' | sed 's/<div class="push".*//g' |
+sed 's,<div class="post" id="\([0-9]*\)" data-date="[0-9]*" data-userid="ID:\([^"]*\)" data-id="[0-9]*"><div class="meta"><span class="number">[0-9]*</span><span class="name"><b>.*</b></span><span class="date">\([^<]*\)</span><span class="uid">ID:[^<]*</span></div><div class="message"><span class="escaped">,\1@\2 [\3]\n,g' |
+html-trim |
+html-unescape
+
+rm $TMP
