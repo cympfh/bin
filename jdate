@@ -14,7 +14,6 @@ calc() {
     t1="$1"  # sunrise
     t2="$2"  # sunset
     t0="$3"  # current
-    NOON=720
     DAY=1440
 
     if [ $t0 -lt $t1 ]; then
@@ -28,8 +27,8 @@ calc() {
 暮七つ半
 EOM
 
-    elif [ $t0 -lt $NOON ]; then
-        i=$(( 1 + 6 * ( t0 - t1 ) / ( NOON - t1 ) ))
+    elif [ $t0 -lt $t2 ]; then
+        i=$(( 1 + 12 * ( t0 - t1 ) / ( t2 - t1 ) ))
         cat <<EOM | head -n $i | tail -1
 明六つ
 明六つ半
@@ -37,11 +36,6 @@ EOM
 明五つ半
 明四つ
 明四つ半
-EOM
-
-    elif [ $t0 -lt $t2 ]; then
-        i=$(( 1 + 6 * ( t0 - NOON ) / ( t2 - NOON ) ))
-        cat <<EOM | head -n $i | tail -1
 明九つ
 明九つ半
 明ハつ
