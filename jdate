@@ -16,18 +16,7 @@ calc() {
     t0="$3"  # current
     DAY=1440
 
-    if [ $t0 -lt $t1 ]; then
-        i=$(( 1 + t0 * 6 / t1 ))
-        cat <<EOM | head -n $i | tail -1
-暮九つ
-暮九つ半
-暮ハつ
-暮ハつ半
-暮七つ
-暮七つ半
-EOM
-
-    elif [ $t0 -lt $t2 ]; then
+    if [ $t1 -le $t0 -a $t0 -lt $t2 ]; then
         i=$(( 1 + 12 * ( t0 - t1 ) / ( t2 - t1 ) ))
         cat <<EOM | head -n $i | tail -1
 明六つ
@@ -45,7 +34,7 @@ EOM
 EOM
 
     else
-        i=$(( 1 + 6 * ( t0 - t2 ) / ( DAY - t2 ) ))
+        i=$(( 1 + 12 * ( ( t0 - t2 + DAY ) % DAY ) / ( ( t1 - t2 + DAY ) % DAY ) ))
         cat <<EOM | head -n $i | tail -1
 暮六つ
 暮六つ半
@@ -53,11 +42,37 @@ EOM
 暮五つ半
 暮四つ
 暮四つ半
+暮九つ
+暮九つ半
+暮ハつ
+暮ハつ半
+暮七つ
+暮七つ半
 EOM
 
     fi
 
 }
+
+debug() {
+    echo "Debug:"
+    echo "Sunrise 6:00"
+    echo "Sunset 18:10"
+    t1=$(( 6 * 60 ))
+    t2=$(( 18 * 60 + 10 ))
+    for h in $(seq 0 23); do
+        for m in $(seq 0 5 59); do
+            echo -n "${h}:${m} "
+            t0=$(( h * 60 + m ))
+            calc $t1 $t2 $t0
+        done
+    done
+}
+
+if [ "$1" = "debug" ]; then
+    debug
+    exit
+fi
 
 fetch | (
     read h1 m1 h2 m2
