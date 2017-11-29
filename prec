@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# キラキラ
+YOUTUBE_URL=$(
+    curl -s https://www.asahi.co.jp/precure/ | grep iframe | grep youtube | tail -1 |
+    grep -o 'embed/[^?]*' | sed 's,embed/,https://www.youtube.com/watch?v=,'
+)
+echo $YOUTUBE_URL
+curl -s $YOUTUBE_URL | grep og:description |
+sed 's/^.*content="//g; s/">//g'
