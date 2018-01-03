@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# キラキラ
+YOUTUBE_ID=$(
+    curl -s https://www.asahi.co.jp/precure/ | grep iframe | grep youtube | tail -1 |
+    grep -o 'embed/[^?]*' | sed 's,embed/,,'
+)
+DESCRIPTION=$(
+    curl -s "https://www.youtube.com/watch?v=${YOUTUBE_ID}" | grep og:description |
+    sed 's/^.*content="//g; s/">//g' |
+    sed 's/ABC.*//g'
+)
+
+echo "http://y2u.be/${YOUTUBE_ID}";
+echo $DESCRIPTION
