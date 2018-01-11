@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# icons ref:
+# https://gist.github.com/pocotan001/68f96bf86891db316f20
+# and https://github.com/slashsBin/styleguide-git-commit-message
+
+get-icon() {
+    cat <<EOM | peco | cut -d' ' -f 1
+:tada:
+:recycle:      refactoring
+:art:          improving the format/structure of the code
+:lipstick:     improving UI
+:memo:         documentation
+:bug:          bugfix
+:sparkles:     new features
+:bulb:         new idea
+:new:          adding code or files
+:fire:         removing code or files
+:rocket:       improving performance
+:construction: WIP
+:handshake     merging
+EOM
+}
+
+get-memo() {
+    read m; echo $m
+}
+
+ICON=$(get-icon)
+echo -n "${ICON} {message} > " >&2
+read MEMO
+echo "$ICON $MEMO" | sed 's/ *$//g'
