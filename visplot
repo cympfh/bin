@@ -52,6 +52,7 @@ def get(item, key, index=0, na=0):
 
 
 @click.command()
+@click.option('--port', '-P', default=8097, type=int, help='the server')
 @click.option('-x', default='index', help='x-axis key; `index` is a special key')
 @click.option('-y', required=True, help='y-axis keys; multiple keys can be specified by comma-split')
 @click.option('--title')
@@ -61,7 +62,7 @@ def get(item, key, index=0, na=0):
 @click.option('--interval', '-i', default=-1, type=int,
               help='plot auto-refresh interval (sec); When this is negative, refresh is disabled (default=-1)')
 @click.argument('logpath')
-def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
+def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
 
     data = [json.loads(line) for line in open(logpath) if not is_comment(line)]
     title = title if title else logpath
@@ -81,7 +82,7 @@ def main(x, y, title, x_label, y_label, smoothing, interval, logpath):
             smoothed_Y[i] = numpy.mean(Y[i - smoothing + 1: i + 1, :], axis=0)
         Y = smoothed_Y
 
-    plot = Visdom()
+    plot = Visdom(port=port)
     opts = {'legend': y_keys}
     if title:
         opts['title'] = title
