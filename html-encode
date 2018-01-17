@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+
+def usage
+  puts <<EOM
+SYNOPSIS
+  html-encode [--decode, -d] <string>
+EOM
+  exit
+end
+
+if ARGV.size.zero?
+  usage
+end
+
+require 'cgi'
+
+if ARGV[0] == '--decode' or ARGV[0] == '-d'
+  puts CGI.unescapeHTML ARGV[1]
+else
+  puts CGI.escapeHTML ARGV[0]
+end
