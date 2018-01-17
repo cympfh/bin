@@ -8,14 +8,34 @@ EOM
   exit
 end
 
-if ARGV.size.zero?
+if ARGV.size == 1 and (ARGV[0] == '-h' or ARGV[0] == '--help')
   usage
+end
+
+def getlines
+  STDIN.each_line.to_a.join('').chomp
 end
 
 require 'cgi'
 
 if ARGV[0] == '--decode' or ARGV[0] == '-d'
-  puts CGI.unescapeHTML ARGV[1]
+
+  if ARGV.size == 2
+    data = ARGV[1]
+  else
+    data = getlines
+  end
+
+  puts CGI.unescapeHTML data
+
 else
-  puts CGI.escapeHTML ARGV[0]
+
+  if ARGV.size == 1
+    data = ARGV[0]
+  else
+    data = getlines
+  end
+
+  puts CGI.escapeHTML data
+
 end
