@@ -80,4 +80,5 @@ curl -s "$URL" | tr -d '\r' |
             printf "\x1b[33m$date \x1b[39m$b\x1b[0m\n"
         fi
 
-    done
+    done |
+    sort
