@@ -54,7 +54,6 @@ parse-datetime() {
 
 URL="http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1"
 CURRENT=$(date "+%s")
-echo $DELETE
 
 curl -s "$URL" | tr -d '\r' |
     grep -E '^(DTSTART|SUMMARY)' |
