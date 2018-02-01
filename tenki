@@ -11,10 +11,12 @@ k2c() {
 }
 
 unix2locale() {
-    if [ $(uname) == "Darwin" ]; then
-        date -r "$1" +"%m-%d %H:%M"
-    else
+    if ( date --version >/dev/null 2>&1 ); then
+        # GNU
         date --date "@$1" +"%m-%d %H:%M"
+    else
+        # BSD
+        date -r "$1" +"%m-%d %H:%M"
     fi
 }
 
