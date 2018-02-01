@@ -1,7 +1,26 @@
 #!/bin/bash
 
+if [ $# -eq 1 ]; then
+    if [ $1 == "-h" -o $1 == "--help" ]; then
+        cat <<EOM
+empty-gpu-device [<NUM>=1]
+
+Find most empty gpu devices
+EOM
+        exit 0
+    fi
+fi
+
+NUM=1
+
+if [ $# -eq 1 ]; then
+    NUM=$1
+fi
+
 if which nvidia-smi >/dev/null; then
-    nvidia-smi | grep Default | awk '{print $9}' | cat -n | sed 's/.iB$//g' | sort -n -k 2 | head -1 | awk '{print $1 - 1}'
+    nvidia-smi | grep Default | awk '{print $9}' | cat -n | sed 's/.iB$//g' | sort -n -k 2 |
+    head -n $NUM |
+    awk '{print $1 - 1}'
 else
     echo 0  # dummy
 fi
