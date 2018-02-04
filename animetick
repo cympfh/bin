@@ -6,48 +6,78 @@ NAME
   animetick -- animetick
 
 SYNOPSIS
-  animetick [ --color ]
+  animetick [ OPTIONS ]
+
+OPTIONS
+  --help, -h
+  --color, -C
+  --delete, -D
 HELP
   exit 0
 }
 
-plain() {
-  curl -s http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1 |
-  tr -d '\r' |
-  grep -E '^(DTSTART|SUMMARY)' |
-  sed 's/^[^:]*://g' | while :; do
-    read a; read b;
-    [ -z "$a" ] && break
-    # 20160404T003000
-    echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
-    echo " $b"
-  done | sort
+#
+# global
+#
+COLOR=0
+DELETE=0
+
+#
+# parse args
+#
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h | --help )
+            usage
+            ;;
+        --color | -C )
+            COLOR=1
+            ;;
+        --delete | -D )
+            DELETE=1
+            ;;
+        -CD | -DC )
+            COLOR=1
+            DELETE=1
+            ;;
+    esac
+    shift
+done
+
+#
+# entry
+#
+
+parse-datetime() {
+    echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
 }
 
-color() {
-  curl -s http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1 |
-  tr -d '\r' |
-  grep -E '^(DTSTART|SUMMARY)' |
-  sed 's/^[^:]*://g' | while :; do
-    read a; read b;
-    [ -z "$a" ] && break
-    # 20160404T003000
-    echo -n $a | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\x1b[32m\1/\2/\3 \4:\5\x1b[0m,g'
-    printf " \x1b[34m$b\x1b[0m\n"
-  done | sort
-}
+URL="http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1"
+CURRENT=$(date "+%s")
 
-if [ $# -eq 0 ]; then
-  plain
-else
-  case $1 in
-    -p | --plain )
-      plain ;;
-    -c | --color )
-      color ;;
-    * )
-      help
-      ;;
-  esac
-fi
+curl -s "$URL" | tr -d '\r' |
+    grep -E '^(DTSTART|SUMMARY)' |
+    sed 's/^[^:]*://g' |
+    while :; do
+        read a; read b;
+        [ -z "$a" ] && break
 
+        date="$(parse-datetime "$a")"
+
+        # delete
+        if [ $DELETE -eq 1 ]; then
+            T=$(date -d "$date" "+%s")
+            if [ $T -lt $CURRENT ]; then
+                continue
+            fi
+        fi
+
+        # display
+        if [ $COLOR -eq 0 ]; then
+            echo "$date $b"
+        else
+            printf "\x1b[33m$date \x1b[39m$b\x1b[0m\n"
+        fi
+
+    done |
+    sort
