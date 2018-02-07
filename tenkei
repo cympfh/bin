@@ -2,7 +2,7 @@
 
 SHINDAN_NUM=$(
     (
-    yes 241197 | head -n 30;
+    yes 241197 | head -n 100;
     cat <<EOM
 274009
 232175
