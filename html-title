@@ -1,0 +1,5 @@
+#!/bin/bash
+
+URL="$1"
+curl -s "${URL}" | tr -d '\n' | grep -o '<title>[^<]*<' |
+sed 's/^<title>//; s/<$//'
