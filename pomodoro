@@ -1,0 +1,31 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+pomodo [ "Your Task" ]
+EOM
+}
+
+TASK="Pomodoro"
+case "$1" in
+    -h | --help )
+        usage
+        exit
+        ;;
+    * )
+        TASK="$1"
+        ;;
+esac
+
+log() {
+    MSG="$1 ($(date))"
+    echo "$MSG"
+    notify --title "Pomodoro" "$MSG"
+}
+
+trap "log 'Interrupted: $TASK'; exit 1" 2
+
+log "Start: $TASK"
+sleep $(( 25 * 60 ))
+log "Finish: $TASK"
+log "Take a Rest"
