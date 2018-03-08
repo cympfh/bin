@@ -2,25 +2,47 @@
 
 usage() {
     cat <<EOM
-pomodo [ "Your Task" ]
+pomodoro [OPTIONS]
+
+OPTIONS
+    -m "Your Task"            used in messages
+    --tee <log-file-path>     log the notification with tee (append)
+    --slack <channel>         notify the channel with slackcat (https://github.com/rlister/slackcat)
+    --help
 EOM
 }
 
 TASK="Pomodoro"
-case "$1" in
-    -h | --help )
-        usage
-        exit
-        ;;
-    * )
-        TASK="$1"
-        ;;
-esac
+TEE=
+SLACK_CHANNEL=
+
+# parse args
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -m | --task )
+            TASK="$2"
+            shift 2
+            ;;
+        -t | -T | --tee )
+            TEE="$2"
+            shift 2
+            ;;
+        -s | -S | --slack | --slackcat )
+            SLACK_CHANNEL="$(echo $2|tr -d '#')"
+            shift 2
+            ;;
+        * )
+            usage
+            exit
+            ;;
+    esac
+done
 
 log() {
-    MSG="$1 ($(date))"
-    echo "$MSG"
-    notify --title "Pomodoro" "$MSG"
+    echo "$1 ($(date))"
+    [ -z "$TEE" ] || echo "$1 ($(date))" >> "$TEE"
+    notify --title "Pomodoro" "$1"
+    [ -z "$SLACK_CHANNEL" ] || echo ":tomato: $1" | slackcat --channel "$SLACK_CHANNEL" --stream
 }
 
 trap "log 'Interrupted: $TASK'; exit 1" 2
