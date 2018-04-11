@@ -7,7 +7,7 @@ fetch() {
 }
 
 now() {
-    date "+%H %M"
+    date "+%_H %_M"
 }
 
 calc() {
@@ -80,7 +80,6 @@ fetch | (
     t2=$((h2 * 60 + m2))
     now | (
         read h0 m0
-        h0=${h0#0}
         t0=$((h0 * 60 + m0))
         calc $t1 $t2 $t0
     )
