@@ -7,7 +7,7 @@ fetch() {
 }
 
 now() {
-    date "+%H %M"
+    date "+%_H %_M"
 }
 
 calc() {
