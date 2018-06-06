@@ -87,8 +87,24 @@ def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
     x_key = x
     y_keys = make_keys(data, y.split(','))
 
-    Y = numpy.array([[get(item, key, i) for key in y_keys] for i, item in enumerate(data)])
-    X = numpy.array([[get(item, x_key, i) for key in y_keys] for i, item in enumerate(data)])
+    def align(xs, ys):
+        assert(len(xs) == len(ys))
+        xs_ = []
+        ys_ = []
+        for i in range(len(xs)):
+            if None in xs[i]:
+                continue
+            if None in ys[i]:
+                continue
+            xs_.append(xs[i])
+            ys_.append(ys[i])
+        return xs_, ys_
+
+    X = [[get(item, x_key, i)] * len(y_keys) for i, item in enumerate(data)]
+    Y = [[get(item, key, i) for key in y_keys] for i, item in enumerate(data)]
+    X, Y = align(X, Y)
+    X = numpy.array(X)
+    Y = numpy.array(Y)
 
     if smoothing > 0:
         last_Y = Y[-smoothing:, :]
@@ -117,8 +133,11 @@ def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
         for line in follow(f, interval):
             N += 1
             data = json.loads(line)
-            X = numpy.array([[get(data, x_key, N) for key in y_keys]])
-            Y = numpy.array([[get(data, key, N) for key in y_keys]])
+            X = [[get(data, x_key, N) for key in y_keys]]
+            Y = [[get(data, key, N) for key in y_keys]]
+            X, Y = align(X, Y)
+            X = numpy.array(X)
+            Y = numpy.array(Y)
             if smoothing > 0:
                 last_Y = numpy.vstack((last_Y, Y))[-smoothing:, :]
                 Y = numpy.mean(last_Y, axis=0).reshape((1, -1))
