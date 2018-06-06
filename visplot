@@ -24,11 +24,19 @@ def is_comment(line):
 
 
 def make_keys(data, key_names):
-    keys = []
+
     all_keys = set()
     for item in data:
-        for k in item:
-            all_keys.add(k)
+        stack = [([], item)]
+        while len(stack) > 0:
+            path, item = stack.pop()
+            for key in item:
+                if type(item[key]) == dict:
+                    stack.append((path + [key], item[key]))
+                else:
+                    all_keys.add('.'.join(path + [key]))
+
+    keys = []
     for name in key_names:
         if '*' in name:
             pattern = re.compile(re.sub('\*', '.*', name))
@@ -39,28 +47,37 @@ def make_keys(data, key_names):
             keys.append(name)
         else:
             click.echo('[Warn] unknown key {}, was ignored'.format(name), err=True)
-            # raise Exception('Unknown key: {}'.format(name))
+
     return keys
 
 
-def get(item, key, index=0, na=0):
+def get(item, key, index=0):
     if key == 'index':
         return index
     if key in item:
         return item[key]
-    return na
+    if '.' in key:
+        subs = key.split('.')
+        value = item
+        for sub in subs:
+            if sub not in value:
+                return None
+            value = value[sub]
+        return value
+    return None
 
 
 @click.command()
 @click.option('--port', '-P', default=8097, type=int, help='the server')
 @click.option('-x', default='index', help='x-axis key; `index` is a special key')
-@click.option('-y', required=True, help='y-axis keys; multiple keys can be specified by comma-split')
+@click.option('-y', required=True,
+              help='y-axis keys; multiple keys can be specified by comma-split')
 @click.option('--title')
 @click.option('--x-label')
 @click.option('--y-label')
 @click.option('--smoothing', default=0, type=int, help='Simple Moving Average with recent N items')
 @click.option('--interval', '-i', default=-1, type=int,
-              help='plot auto-refresh interval (sec); When this is negative, refresh is disabled (default=-1)')
+              help='plot auto-refresh interval (sec); when negative, disabled (default=-1)')
 @click.argument('logpath')
 def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
 
