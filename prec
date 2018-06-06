@@ -2,7 +2,7 @@
 
 # キラキラ
 YOUTUBE_ID=$(
-    curl -s https://www.asahi.co.jp/precure/ | grep iframe | grep youtube | tail -1 |
+    curl -s "https://www.asahi.co.jp/precure/hugtto/js/inc/next.js" | grep youtube |
     grep -o 'embed/[^?]*' | sed 's,embed/,,'
 )
 DESCRIPTION=$(
