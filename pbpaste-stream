@@ -9,7 +9,7 @@ SYNOPSIS
   pbpaste-stream [-0]
 
 OPTIONS
-  -0     output the current clipboard just on this command starting
+  -0     include the clipboard on starting command (exclude in default)
 EOM
 exit
 }
