@@ -20,18 +20,25 @@ unix2locale() {
     fi
 }
 
+is404() {
+    grep '{"cod":"404",' $1 >/dev/null
+}
+
 current() {
     LOC=$1
     TMP=$(mktemp)
     curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" > $TMP
-    TEMP=$(k2c $(jq '.main.temp' $TMP))
-    TEMP_MIN=$(k2c $(jq '.main.temp_min' $TMP))
-    TEMP_MAX=$(k2c $(jq '.main.temp_max' $TMP))
-
-    jq -r '"\(.name),\(.sys.country)
+    if is404 "$TMP"; then
+        echo "City not found"
+    else
+        TEMP=$(k2c $(jq '.main.temp' $TMP))
+        TEMP_MIN=$(k2c $(jq '.main.temp_min' $TMP))
+        TEMP_MAX=$(k2c $(jq '.main.temp_max' $TMP))
+        jq -r '"\(.name),\(.sys.country)
 '$TEMP'°C ('$TEMP_MIN'°C/'$TEMP_MAX'°C)
 \(.main.pressure)hPa
 \(.weather[0].main) (\(.weather[0].description))"' $TMP
+    fi
     rm $TMP
 }
 
@@ -39,12 +46,16 @@ forecast() {
     LOC=$1
     TMP=$(mktemp)
     curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" > $TMP
-    jq -r '"\(.city.name),\(.city.country)"' $TMP
-    export -f k2c
-    export -f unix2locale
-    jq -r '.list[] | "echo $(unix2locale \(.dt)) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
-    awk 'NR<5 || NR%8==1' | bash |
-    sed 's/^20[0-9]*-//g'
+    if is404 "$TMP"; then
+        echo "City not found"
+    else
+        jq -r '"\(.city.name),\(.city.country)"' $TMP
+        export -f k2c
+        export -f unix2locale
+        jq -r '.list[] | "echo $(unix2locale \(.dt)) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
+        awk 'NR<5 || NR%8==1' | bash |
+        sed 's/^20[0-9]*-//g'
+    fi
     rm $TMP
 }
 
