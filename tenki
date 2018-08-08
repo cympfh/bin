@@ -47,6 +47,33 @@ current() {
     rm "$TMP"
 }
 
+current-icon() {
+    LOC=$1
+    TMP=$(mktemp)
+    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" | jq '.weather[0].main' >"$TMP"
+
+    ICONS=(
+    light:26A1
+    snow:2603
+    rain:2602
+    cloud:2601
+    sun:2600
+    )
+
+    ICON_NUM=fffd
+    for kv in "${ICONS[@]}"; do
+        key=${kv%:*}
+        val=${kv#*:}
+        if grep -i "$key" "$TMP" >/dev/null; then
+            ICON_NUM=$val
+            break
+        fi
+    done
+    echo -e "\u${ICON_NUM}"
+
+    rm "$TMP"
+}
+
 forecast() {
     LOC=$1
     TMP=$(mktemp)
@@ -84,11 +111,16 @@ fi
 # argsparse
 #
 FORECAST=0
+ICON=0
 LOC=Tokyo
 while [ $# -gt 0 ]; do
     case $1 in
         -f )
             FORECAST=1
+            shift
+            ;;
+        --icon | -icon )
+            ICON=1
             shift
             ;;
         * )
@@ -98,7 +130,9 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-if [ $FORECAST -eq 0 ]; then
+if [ $ICON -eq 1 ]; then
+    current-icon "$LOC"
+elif [ $FORECAST -eq 0 ]; then
     current "$LOC"
 else
     forecast "$LOC"
