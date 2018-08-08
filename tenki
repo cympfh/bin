@@ -50,27 +50,32 @@ current() {
 current-icon() {
     LOC=$1
     TMP=$(mktemp)
-    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" | jq '.weather[0].main' >"$TMP"
+    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" |
+    jq -r '.weather[0] | "\(.main) \(.description)"' >"$TMP"
 
     ICONS=(
-    light:26A1
-    snow:2603
-    rain:2602
-    cloud:2601
-    sun:2600
-    clear:2600
+    lightning:\\u26A1
+    thunder:\\u26A1
+    snow:\\u2603
+    shower:\\u2614
+    rain:\\u2602
+    Haze:\\xf0\\x9f\\x8c\\x81
+    fog:\\xf0\\x9f\\x8c\\x81
+    cloud:\\u2601
+    sun:\\u2600
+    clear:\\u2600
     )
 
-    ICON_NUM=fffd
+    ICON_CHAR="\\ufffd"
     for kv in "${ICONS[@]}"; do
         key=${kv%:*}
         val=${kv#*:}
         if grep -i "$key" "$TMP" >/dev/null; then
-            ICON_NUM=$val
+            ICON_CHAR=$val
             break
         fi
     done
-    echo -e "\u${ICON_NUM}"
+    echo -e "$ICON_CHAR"
 
     rm "$TMP"
 }
