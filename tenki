@@ -58,6 +58,7 @@ current-icon() {
     rain:2602
     cloud:2601
     sun:2600
+    clear:2600
     )
 
     ICON_NUM=fffd
