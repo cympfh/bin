@@ -7,7 +7,11 @@ APPID=cc78d27e7519b67719a1121d90e67426
 #
 
 k2c() {
-    awk "BEGIN { print int(($1 - 273.15) * 10) / 10 }"
+    if [ $# -eq 0 ]; then
+        k2c "$(cat)"
+    else
+        awk "BEGIN { print int(($1 - 273.15) * 10) / 10 }"
+    fi
 }
 
 unix2locale() {
@@ -21,42 +25,43 @@ unix2locale() {
 }
 
 is404() {
-    grep '{"cod":"404",' $1 >/dev/null
+    grep '{"cod":"404",' "$1" >/dev/null
 }
 
 current() {
     LOC=$1
     TMP=$(mktemp)
-    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" > $TMP
+    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" >"$TMP"
     if is404 "$TMP"; then
         echo "City not found"
     else
-        TEMP=$(k2c $(jq '.main.temp' $TMP))
-        TEMP_MIN=$(k2c $(jq '.main.temp_min' $TMP))
-        TEMP_MAX=$(k2c $(jq '.main.temp_max' $TMP))
-        jq -r '"\(.name),\(.sys.country)
-'$TEMP'°C ('$TEMP_MIN'°C/'$TEMP_MAX'°C)
-\(.main.pressure)hPa
-\(.weather[0].main) (\(.weather[0].description))"' $TMP
+        TEMP=$(jq '.main.temp' "$TMP" | k2c)
+        TEMP_MIN=$(jq '.main.temp_min' "$TMP" | k2c)
+        TEMP_MAX=$(jq '.main.temp_max' "$TMP" | k2c)
+        FORMAT=$(printf "\"\\(.name),\\(.sys.country)
+%.1f°C (%.1f°C/%.1f°C)
+\\(.main.pressure)hPa
+\\(.weather[0].main) (\\(.weather[0].description))\"" "$TEMP" "$TEMP_MIN" "$TEMP_MAX")
+        jq -r "$FORMAT" "$TMP"
     fi
-    rm $TMP
+    rm "$TMP"
 }
 
 forecast() {
     LOC=$1
     TMP=$(mktemp)
-    curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" > $TMP
+    curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" >"$TMP"
     if is404 "$TMP"; then
         echo "City not found"
     else
-        jq -r '"\(.city.name),\(.city.country)"' $TMP
+        jq -r '"\(.city.name),\(.city.country)"' "$TMP"
         export -f k2c
         export -f unix2locale
-        jq -r '.list[] | "echo $(unix2locale \(.dt)) $(k2c \(.main.temp))°C \(.weather[0].main)"' $TMP |
+        jq -r ".list[] | \"echo \$(unix2locale \\(.dt)) \$(k2c \\(.main.temp))°C \\(.weather[0].main)\"" "$TMP" |
         awk 'NR<5 || NR%8==1' | bash |
         sed 's/^20[0-9]*-//g'
     fi
-    rm $TMP
+    rm "$TMP"
 }
 
 #
@@ -94,7 +99,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ $FORECAST -eq 0 ]; then
-    current $LOC
+    current "$LOC"
 else
-    forecast $LOC
+    forecast "$LOC"
 fi
