@@ -1,0 +1,41 @@
+#!/usr/bin/env ruby
+
+require 'time'
+
+def usage
+  puts <<EOM
+Usage: gtime <datetime-string>
+    datetime-string can be <iso8601> or <rfc2822> or <epoch (unix) time>.
+    gtime shows the datetime of it in 3 formats.
+EOM
+end
+
+def intish(n)
+  if n == n.to_i.to_s
+    n.to_i
+  else
+    nil
+  end
+end
+
+def main(time)
+  begin
+    if intish(time)
+      t = Time.at(intish(time)).to_datetime
+    else
+      t = DateTime.parse time
+    end
+    puts t.iso8601
+    puts t.rfc2822
+    p t.to_time.to_i
+  rescue
+    STDERR.puts "Unknown datetime format: #{time}"
+    exit 1
+  end
+end
+
+if ARGV.size == 1 and ARGV[0] != '-h' and ARGV[0] != '--help'
+  main ARGV[0]
+else
+  usage
+end
