@@ -80,8 +80,19 @@ current-icon() {
     rm "$TMP"
 }
 
+filter() {
+    if [ $1 == "sampling" ]; then
+        awk 'NR<5 || NR%8==1'
+    else
+        cat
+    fi
+}
+
 forecast() {
+
     LOC=$1
+    MODE=$2
+
     TMP=$(mktemp)
     curl -s "http://api.openweathermap.org/data/2.5/forecast?q=$LOC&appid=$APPID" >"$TMP"
     if is404 "$TMP"; then
@@ -91,8 +102,9 @@ forecast() {
         export -f k2c
         export -f unix2locale
         jq -r ".list[] | \"echo \$(unix2locale \\(.dt)) \$(k2c \\(.main.temp))°C \\(.weather[0].main)\"" "$TMP" |
-        awk 'NR<5 || NR%8==1' | bash |
-        sed 's/^20[0-9]*-//g'
+            filter "$MODE" |
+            bash |
+            sed 's/^20[0-9]*-//g'
     fi
     rm "$TMP"
 }
@@ -125,6 +137,10 @@ while [ $# -gt 0 ]; do
             FORECAST=1
             shift
             ;;
+        --full | -F )
+            FORECAST=2
+            shift
+            ;;
         --icon | -icon )
             ICON=1
             shift
@@ -140,6 +156,8 @@ if [ $ICON -eq 1 ]; then
     current-icon "$LOC"
 elif [ $FORECAST -eq 0 ]; then
     current "$LOC"
+elif [ $FORECAST -eq 1 ]; then
+    forecast "$LOC" sampling
 else
-    forecast "$LOC"
+    forecast "$LOC" full
 fi
