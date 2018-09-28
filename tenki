@@ -116,9 +116,12 @@ forecast() {
 #
 usage() {
     cat <<EOD
-SYNOPSIS: tenki [-f] <City-name>
+SYNOPSIS: tenki [-f] [--full] [--tomorrow] <City-name>
 OPTIONS:
-  -f  forecast
+  (no options)   current tenki
+  -f             forecast (sampled)
+  --full         forecast (full)
+  --tomorrow     forecast (30hr)
 EOD
     exit 0
 }
