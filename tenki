@@ -81,9 +81,11 @@ current-icon() {
 }
 
 filter() {
-    if [ $1 == "sampling" ]; then
+    if [ "$1" == "sampling" ]; then
         awk 'NR<5 || NR%8==1'
-    else
+    elif [ "$1" == "tomorrow" ]; then
+        head -n 10
+    else  # full
         cat
     fi
 }
@@ -128,17 +130,21 @@ fi
 #
 # argsparse
 #
-FORECAST=0
+FORECAST=
 ICON=0
 LOC=Tokyo
 while [ $# -gt 0 ]; do
     case $1 in
         -f )
-            FORECAST=1
+            FORECAST=SAMPLING
             shift
             ;;
         --full | -F )
-            FORECAST=2
+            FORECAST=FULL
+            shift
+            ;;
+        --tomorrow )
+            FORECAST=TOMORROW
             shift
             ;;
         --icon | -icon )
@@ -154,10 +160,12 @@ done
 
 if [ $ICON -eq 1 ]; then
     current-icon "$LOC"
-elif [ $FORECAST -eq 0 ]; then
+elif [ -z "$FORECAST" ]; then
     current "$LOC"
-elif [ $FORECAST -eq 1 ]; then
+elif [ "$FORECAST" = SAMPLING ]; then
     forecast "$LOC" sampling
-else
+elif [ "$FORECAST" = FULL ]; then
     forecast "$LOC" full
+elif [ "$FORECAST" = TOMORROW ]; then
+    forecast "$LOC" tomorrow
 fi
