@@ -1,0 +1,16 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+Usage: $0 <word>
+EOM
+    exit
+}
+
+WORD=$1
+
+if [ -z "$WORD" ]; then
+    usage
+fi
+
+curl -s https://weblio.hs.llnwd.net/e8/audio/$WORD.mp3 | mplayer -cache 1024 -
