@@ -1,0 +1,67 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+USAGE:
+    cat some text | slacktee <channel> [OPTIONS]
+
+OPTIONS
+    -N    dry-run
+
+EOM
+}
+
+CHANNEL=
+DRYRUN=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h | --help )
+            usage
+            exit
+            ;;
+        -N )
+            DRYRUN=1
+            shift
+            ;;
+        * )
+            CHANNEL=$1
+            shift
+            ;;
+    esac
+done
+if [ -z "$CHANNEL" ]; then
+    echo "Error: No channel specified"
+    usage
+    exit 1
+fi
+
+# get text
+TEXT=$(
+    cat |
+        awk '{printf $0"\\n"}' |
+        sed 's/\\n$//g'
+)
+
+# make playload
+TMP=$(mktemp)
+cat <<EOM >$TMP
+{
+"channel": "$CHANNEL",
+"text": "$TEXT",
+"as_user": true
+}
+EOM
+
+if [ $DRYRUN -eq 1 ]; then
+    echo "Dryrun:"
+    jq . $TMP
+    rm $TMP
+    exit
+fi
+
+# post
+curl -XPOST \
+    -H "Authorization: Bearer $(cat ~/.slackcat)" \
+    -H 'Content-type: application/json; charset=utf-8' \
+    "https://slack.com/api/chat.postMessage" -d @$TMP
+rm $TMP
