@@ -2,12 +2,17 @@
 
 usage() {
     cat <<EOM
-USAGE:
+USAGE
     cat some text | slacktee <channel> [OPTIONS]
+
+SYNOPSIS
+    seq 10 | slacktee timeline
 
 OPTIONS
     -N    dry-run
 
+CONFIG
+    Put Slack token (https://api.slack.com/custom-integrations/legacy-tokens) in ~/.slackcat
 EOM
 }
 
