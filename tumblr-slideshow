@@ -1,29 +1,36 @@
 #!/bin/bash
 
+U=cympfh
+N=5
+D=2
+
 usage() {
   cat << USAGE
 NAME
   tumblr -- slideshow on my Tumblr
 
 SYNOPSIS
-  tumblr [ -n <int> ] [ -D <int> ]
+  tumblr [ -u <username> ] [ --pages <int> ] [ -D <int> ]
 
-  -n  the number of pages of rss
-  -D  interval (sec) of the slideshow
+  -u           Tumblr username (optional, default "$U")
+  --pages, -n  The number of pages of rss (optional, default $N)
+  -D           Interval (sec) of the slideshow (optional, default $D)
 USAGE
   exit 0
 }
 
-N=3
-D=2
 while [ ! -z "$1" ]; do
   case $1 in
-    -n )
+    -n | --pages )
       N="$2"
       shift 2
       ;;
     -D )
       D="$2"
+      shift 2
+      ;;
+    -u )
+      U="$2"
       shift 2
       ;;
     * )
@@ -32,8 +39,25 @@ while [ ! -z "$1" ]; do
   esac
 done
 
-imgs(){
-  curl -s "$1" | grep -o 'src="[^"]*"' | sed 's/^src="//g;s/"$//g'
+getpage() {
+  curl -s "$1://${U}.tumblr.com/page/$2/rss" |
+    grep -o 'src="[^"][^"]*' | sed 's/^src="//g;s/"$//g'
 }
 
-feh -D "$D" -FZz $(for i in $(seq 1 "$N"); do imgs "http://cympfh.tumblr.com/page/$i/rss"; done)
+FILELIST=$(mktemp)
+
+for i in $(seq 1 "$N"); do
+  echo -ne "\rPage [$i/$N]" >&2
+  getpage http "$i" >> "$FILELIST"
+  getpage https "$i" >> "$FILELIST"
+done
+echo
+
+NUM=$(wc -l < "$FILELIST")
+echo -e "Found ${NUM} images" >&2
+
+if [ "$NUM" -gt 0 ]; then
+  feh -D "$D" -FZz --filelist "$FILELIST"
+fi
+
+rm "$FILELIST"
