@@ -1,6 +1,0 @@
-#!/bin/bash
-
-export LANG=en_US.UTF-8
-tenki=`~/bin/tenki`
-echo -e "\005{= y}`whoami` \005{= R}  \005{= b}$tenki"
-
