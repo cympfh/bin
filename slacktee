@@ -65,8 +65,9 @@ if [ $DRYRUN -eq 1 ]; then
 fi
 
 # post
-curl -XPOST \
+curl -s -XPOST \
     -H "Authorization: Bearer $(cat ~/.slackcat)" \
     -H 'Content-type: application/json; charset=utf-8' \
-    "https://slack.com/api/chat.postMessage" -d @$TMP
+    "https://slack.com/api/chat.postMessage" -d @$TMP >/dev/null
 rm $TMP
+echo -e "$TEXT"
