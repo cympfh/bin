@@ -1,5 +1,7 @@
 #!/bin/bash
 
 URL="$1"
-curl -sL "${URL}" | tr -d '\n' | grep -o '<title>[^<]*<' |
-sed 's/^<title>//; s/<$//'
+curl -sL "${URL}" | tr -d '\n' |
+    sed 's/<body.*//g' |
+    grep -o '<title>[^<]*<' |
+    sed 's/^<title>//; s/<$//'
