@@ -84,7 +84,7 @@ filter() {
 
 RESULT=$(list | filter $@)
 if [ -z "$RESULT" ]; then
-    echo "Unknown: $1"
+    echo "[Error] Unknown: $@"
     exit 1
 fi
 
