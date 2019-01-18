@@ -4,6 +4,7 @@ TITLE=
 SUBTITLE=
 MESSAGE=
 ICON=$HOME/bin/img/osaka.jpg
+SOUND=0
 
 usage() {
   cat << USAGE
@@ -11,7 +12,7 @@ NAME
     notify -- my wrapper for gnome-notify (gnome), terminal-notifier (OSX)
 
 SYNOPSIS
-    notify [ --title <string> ] [ --subtitle <string> ] [ --icon <path or URL> ] <string>
+    notify [ --title <string> ] [ --subtitle <string> ] [ --icon <path or URL> ] [ --sound ] <string>
 USAGE
   exit 0
 }
@@ -33,6 +34,10 @@ while [ ! -z "$1" ]; do
     --help | -h | -? )
       usage
       ;;
+  --sound | -S )
+      SOUND=1
+      shift
+      ;;
     * )
       MESSAGE=$1
       shift 1
@@ -46,3 +51,10 @@ else
   echo "command not found"
 fi
 
+if [ $SOUND -eq 1 ]; then
+    SND_PATH=/tmp/notification.sound.mp3
+    if [ ! -f $SND_PATH ]; then
+        wget -O $SND_PATH https://notificationsounds.com/soundfiles/a86c450b76fb8c371afead6410d55534/file-sounds-1108-slow-spring-board.mp3
+    fi
+    mplayer $SND_PATH
+fi
