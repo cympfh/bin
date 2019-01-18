@@ -1,0 +1,54 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+usage: weasel [ <PID> ]
+
+weasel will watch the process of PID, then notify after fienished.
+If no <PID> given, runs \`ps | peco\`
+EOM
+}
+
+getpid() {
+    ps aux | peco | awk '{print $2}'
+}
+
+alive() {
+    [ -n "$(ps aux | awk "$1 == \$2")" ]
+}
+
+PID=
+if [ $# -eq 0 ]; then
+    PID=$(getpid)
+else
+    case "$1" in
+        -h | --help )
+            usage
+            exit
+            ;;
+        * )
+            PID=$1
+            ;;
+    esac
+fi
+
+# check process
+TITLE=$(ps aux | awk "$PID == \$2 {print \$11}")
+if [ -z "$TITLE" ]; then
+    echo "Error: Process $PID not found" >&2
+    exit 1
+fi
+
+# watching loop
+echo "Watching $PID ($TITLE)..." >&2
+while :; do
+    if alive "$PID" >/dev/null; then
+        sleep 1
+    else
+        break
+    fi
+done
+
+# notification
+echo "Process $PID ($TITLE) done!!" >&2
+notify --sound --title weasel "Process $PID ($TITLE) done!!"
