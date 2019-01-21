@@ -9,7 +9,7 @@ SOUND=0
 usage() {
   cat << USAGE
 NAME
-    notify -- my wrapper for gnome-notify (gnome), terminal-notifier (OSX)
+    notify -- my wrapper for notify-send (ubuntu), terminal-notifier (OSX)
 
 SYNOPSIS
     notify [ --title <string> ] [ --subtitle <string> ] [ --icon <path or URL> ] [ --sound ] <string>
@@ -17,6 +17,12 @@ USAGE
   exit 0
 }
 
+nopackage() {
+    echo "Please install notify-send or terminal-notifier. Or implement"
+    exit 1
+}
+
+# args
 while [ ! -z "$1" ]; do
   case $1 in
     --title | -title )
@@ -45,6 +51,7 @@ while [ ! -z "$1" ]; do
   esac
 done
 
+# exec notify
 if ( which terminal-notifier >/dev/null ); then
     terminal-notifier -title "${TITLE}" -subtitle "${SUBTITLE}" -message "${MESSAGE}" -appIcon "${ICON}"
 elif ( which notify-send >/dev/null ); then
@@ -56,9 +63,10 @@ elif ( which notify-send >/dev/null ); then
     fi
     notify-send "${TITLE}" "${MESSAGE}" --icon "${ICON}"
 else
-  echo "command not found"
+    nopackage
 fi
 
+# --sound
 if [ $SOUND -eq 1 ]; then
     SND_PATH=/tmp/notification.sound.mp3
     if [ ! -f $SND_PATH ]; then
