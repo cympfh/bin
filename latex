@@ -1,0 +1,21 @@
+#!/bin/bash
+
+for dep in docker; do
+    if ! which $dep >/dev/null; then
+        echo "$dep required"
+        exit 1
+    fi
+done
+
+usage() {
+    echo "Usage: latex <file.tex>"
+    exit
+}
+
+if [ $# -ne 1 ]; then
+    usage
+fi
+
+BASENAME=${1%.tex}
+docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja uplatex $BASENAME.tex
+docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja dvipdfmx $BASENAME
