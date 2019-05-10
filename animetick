@@ -52,7 +52,7 @@ parse-datetime() {
     echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
 }
 
-URL="http://animetick.net/users/cympfh/ics?h=abd2d0652f64586c52540c01b8107eb1"
+URL="http://animetick.net/users/srfi49/ics?h=c5dc373a44f1adec56b7047f09c6bb6c"
 CURRENT=$(date "+%s")
 
 curl -s "$URL" | tr -d '\r' |
