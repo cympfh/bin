@@ -1,0 +1,10 @@
+#!/bin/bash
+
+case "$1" in
+    -encrypt )
+        openssl rsautl -encrypt -pubin -inkey <(ssh-keygen -e -f "$2" -m PKCS8) | base64
+        ;;
+    -decrypt )
+        base64 -D | openssl rsautl -decrypt -inkey "$2"
+        ;;
+esac
