@@ -1,7 +1,9 @@
 #!/bin/bash
 
 URL="$1"
-curl -sL "${URL}" | tr -d '\n' |
+curl -sL "${URL}" |
+    nkf |
+    tr -d '\n' |
     sed 's/<body.*//g' |
     grep -o '<title>[^<]*<' |
     sed 's/^<title>//; s/<$//'
