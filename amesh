@@ -1,22 +1,52 @@
 #!/bin/bash
 
-OUT=/tmp/amesh.jpg
-
-if [ $# -eq 1 ]; then
-    OUT=$1
-fi
-
+OUT=/tmp/amesh.gif
 MAP=/tmp/map.jpg
 MASK=/tmp/mask.png
 CLOUD=/tmp/cloud.gif
 
+ANIMATION=0
+
+cloud-url() {
+    offset=${1:-0}
+    DT=$( date -d @"$(( ( $(date "+%s") - 200 ) / 300 * 300 - offset * 300 ))" "+%Y%m%d%H%M" )
+    echo "http://tokyo-ame.jwa.or.jp/mesh/000/${DT}.gif"
+}
+
+snap-current() {
+    wget -O $CLOUD $(cloud-url $1)
+    convert $MAP $CLOUD -compose over -composite /tmp/amesh_tmp.jpg
+    convert /tmp/amesh_tmp.jpg $MASK -compose over -composite $OUT
+}
+
+snap-animation() {
+    for i in {0..9}; do
+        snap-current $i
+        mv $OUT "/tmp/amesh.animation.$(printf "%03d" $(( 100 - i )) ).gif"
+    done
+    convert -layers optimize -loop 0 -delay 20 /tmp/amesh.animation.*.gif $OUT
+    rm /tmp/amesh.animation.*.gif
+}
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -a | -A )
+            ANIMATION=1
+            shift
+            ;;
+        * )
+            OUT=$1
+            shift
+            ;;
+    esac
+done
+
 wget -O $MAP http://tokyo-ame.jwa.or.jp/map/map000.jpg
 wget -O $MASK http://tokyo-ame.jwa.or.jp/map/msk000.png
-CLOUD_URL="http://tokyo-ame.jwa.or.jp/mesh/000/$(date "+%Y%m%d%H")$(printf "%02d" $(( ( $(date "+%M") - 2 ) / 5 * 5))).gif"
-wget -O $CLOUD "$CLOUD_URL"
-
-convert $MAP $CLOUD -compose over -composite /tmp/amesh_tmp.jpg
-convert /tmp/amesh_tmp.jpg $MASK -compose over -composite $OUT
-
+if [ "$ANIMATION" -eq 0 ]; then
+    snap-current
+else
+    snap-animation
+fi
 rm $MAP $MASK $CLOUD /tmp/amesh_tmp.jpg
 echo "$OUT generated" >&2
