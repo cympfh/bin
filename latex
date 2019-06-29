@@ -16,16 +16,6 @@ if [ $# -ne 1 ]; then
     usage
 fi
 
-FILENAME=$1
-BASENAME=${FILENAME%.tex}
-BASENAME=${BASENAME%.md}
-BASENAME=${BASENAME%.mkd}
-
-case "$1" in
-    *.md | *.mkd )
-        pandoc -s $1 -o $BASENAME.tex -V documentclass=bxjsarticle -V classoption=pandoc -V classoption=jafont=ipaex
-        ;;
-esac
-
+BASENAME=${1%.tex}
 docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja uplatex $BASENAME.tex
 docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja dvipdfmx $BASENAME
