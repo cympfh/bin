@@ -32,6 +32,16 @@ EOM
     exit
 }
 
+tempfilelist=$(mktemp)
+
+make-temp() {
+    f=$(mktemp --suffix ".$1")
+    g=${f##*/}
+    mv $f $g
+    echo $g >> $tempfilelist
+    echo $g
+}
+
 INPUT=
 TYPE=
 OUTPUT=
@@ -75,8 +85,7 @@ if [ -z "$INPUT" ]; then
     else
         BASENAME=${OUTPUT%.pdf}
     fi
-    echo "cat $BASENAME $TYPE"
-    INPUT="$BASENAME.$TYPE"
+    INPUT=$( make-temp "$TYPE" )
     cat > $INPUT
 else
     BASENAME=${INPUT%.tex}
@@ -97,3 +106,9 @@ fi
 # tex -> pdf
 docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja uplatex $BASENAME.tex
 docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja dvipdfmx -o $OUTPUT $BASENAME
+
+# clean up
+for f in $(cat $tempfilelist); do
+    rm $f
+done
+rm $tempfilelist
