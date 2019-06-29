@@ -8,92 +8,24 @@ for dep in docker; do
 done
 
 usage() {
-    cat <<EOM
-Usage: latex [ -f <input-type> ] [<input>] [ -o <out.pdf> ]
-
-OPTIONS
-
--f <input-type>
-    Specify input resource type.
-    "tex" or "md" (or "markdown")
-    If <input> has good extension, -f doesn't need.
-
-<input>
-    Pass input file path.
-    If this omitted, stdin will be read (and -f needs).
-
--o <out.pdf>
-    Pass output file path.
-    This path must have extension ".pdf"
-    If this omitted, output path will be reasoned by input file path.
-    (For example: in.tex -> in.pdf)
-
-EOM
+    echo "Usage: latex <file.tex>"
     exit
 }
 
-INPUT=
-TYPE=
-OUTPUT=
-
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -o )
-            OUTPUT=$2
-            shift 2
-            ;;
-        -f )
-            TYPE=$2
-            shift 2
-            ;;
-        *.tex )
-            INPUT=$1
-            TYPE=tex
-            shift
-            ;;
-        *.md | *.mkd )
-            INPUT=$1
-            TYPE=md
-            shift
-            ;;
-        * )
-            usage
-            exit
-            ;;
-    esac
-done
-
-if [ -z "$INPUT" -a -z "$OUTPUT" -a -z "$TYPE" ]; then
-    echo "Cannot inference resouce type from stdin"
-    exit 1
+if [ $# -ne 1 ]; then
+    usage
 fi
 
-# make input from stdin
-if [ -z "$INPUT" ]; then
-    if [ -z "$OUTPUT" ]; then
-        BASENAME=out
-    else
-        BASENAME=${OUTPUT%.pdf}
-    fi
-    echo "cat $BASENAME $TYPE"
-    INPUT="$BASENAME.$TYPE"
-    cat > $INPUT
-else
-    BASENAME=${INPUT%.tex}
-    BASENAME=${BASENAME%.md}
-    BASENAME=${BASENAME%.mkd}
-fi
+FILENAME=$1
+BASENAME=${FILENAME%.tex}
+BASENAME=${BASENAME%.md}
+BASENAME=${BASENAME%.mkd}
 
-# set output
-if [ -z "$OUTPUT" ]; then
-    OUTPUT=$BASENAME.pdf
-fi
+case "$1" in
+    *.md | *.mkd )
+        pandoc -s $1 -o $BASENAME.tex -V documentclass=bxjsarticle -V classoption=pandoc -V classoption=jafont=ipaex
+        ;;
+esac
 
-# markdown -> tex
-if [ "$TYPE" = md -o "$TYPE" = mkd ]; then
-    pandoc -s "$INPUT" -o $BASENAME.tex -V documentclass=bxjsarticle -V classoption=pandoc -V classoption=jafont=ipaex
-fi
-
-# tex -> pdf
 docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja uplatex $BASENAME.tex
-docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja dvipdfmx -o $OUTPUT $BASENAME
+docker run --rm -v ${PWD}:/workdir paperist/alpine-texlive-ja dvipdfmx $BASENAME
