@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cd ~/git/ethlog/
+echo "$@" | node sender.js
