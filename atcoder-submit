@@ -1,0 +1,109 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+SYNOPSIS
+    atcoder-submit <contest_id> <problem_alphabet> <code_filename> [ --lang <lang> ]
+
+EXAMPLE
+    atcoder-submit abc134 a main.cc
+
+OPTIONS
+    contest_id
+        "abc134" とか "ABC134" とか
+    problem_alphabet
+        "A" とか "b" とか
+    code_filename
+        "main.cc" とか "main.rs" とか
+    --lang <lang>
+        cpp とか rust とか
+        (source_code_file の拡張子が一般的なら推測します)
+EOM
+    exit
+}
+
+to-upper() {
+    tr '[:lower:]' '[:upper:]'
+}
+
+to-lower() {
+    tr '[:upper:]' '[:lower:]'
+}
+
+CONTEST_ID=
+PROBLEM_ALPHABET=
+PROBLEM_ID=
+CODE_FILENAME=
+CODE_LANG=
+
+ARGPOS=0
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help | -h )
+            usage
+            ;;
+        --lang )
+            CODE_LANG=$2
+            shift 2
+            ;;
+        * )
+            case $ARGPOS in
+                0 )
+                    CONTEST_ID="$( echo $1 | to-lower )"
+                    ARGPOS=1
+                    ;;
+                1 )
+                    PROBLEM_ALPHABET="$( echo $1 | to-upper )"
+                    PROBLEM_ID="$( echo "${CONTEST_ID}_${PROBLEM_ALPHABET}" | to-lower )"
+                    ARGPOS=2
+                    ;;
+                2 )
+                    CODE_FILENAME=$1
+                    case "$CODE_FILENAME" in
+                        *.cpp | *.cc )
+                            CODE_LANG=cpp
+                            ;;
+                        *.rs )
+                            CODE_LANG=rust
+                            ;;
+                    esac
+                    ARGPOS=3
+                    ;;
+                * )
+                    echo "Error: Invalid argument: $1" >&2
+                    usage
+                    ;;
+            esac
+            shift
+            ;;
+    esac
+done
+
+if [ $ARGPOS -ne 3 ]; then
+    echo "Error: Not sufficient arguments" >&2
+    usage
+fi
+if [ -z "$CODE_LANG" ]; then
+    echo "Error: Cannot detect language (Please provide --lang)"
+    exit 1
+fi
+
+echo "Submit $CODE_FILENAME ($CODE_LANG) to $PROBLEM_ID"
+
+cat <<EOM > metadata.json
+{
+  "code_filename": "$CODE_FILENAME",
+  "lang": "$CODE_LANG",
+  "problem": {
+    "alphabet": "$PROBLEM_ALPHABET",
+    "contest": {
+      "contest_id": "$CONTEST_ID"
+    },
+    "problem_id": "$PROBLEM_ID"
+  },
+  "sample_in_pattern": "in_*.txt",
+  "sample_out_pattern": "out_*.txt"
+}
+EOM
+
+atcoder-tools submit -uf
