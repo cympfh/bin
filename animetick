@@ -1,6 +1,6 @@
 #!/bin/bash
 
-help() {
+usage() {
   cat << HELP
 NAME
   animetick -- animetick
@@ -52,7 +52,7 @@ parse-datetime() {
     echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
 }
 
-URL="http://animetick.net/users/srfi49/ics?h=c5dc373a44f1adec56b7047f09c6bb6c"
+URL="http://animetick.net/users/ampeloss/ics?h=00f6a1846575e9eff488e118b7626417"
 CURRENT=$(date "+%s")
 
 curl -s "$URL" | tr -d '\r' |
