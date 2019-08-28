@@ -1,0 +1,22 @@
+#!/bin/bash
+
+DIR=$HOME/bin/stuff
+EXEC=$DIR/peco
+
+mkdir -p $DIR
+if [ -f $EXEC ]; then
+    exec $EXEC $@
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+    wget -O /tmp/peco.zip https://github.com/peco/peco/releases/download/v0.5.3/peco_darwin_amd64.zip
+    unzip -p /tmp/peco.zip peco_darwin_amd64/peco > $EXEC
+    rm /tmp/peco.zip
+else
+    wget -O /tmp/peco.tar.gz https://github.com/peco/peco/releases/download/v0.5.3/peco_linux_arm64.tar.gz
+    tar xfO /tmp/peco.tar.gz peco_linux_arm64/peco > $EXEC
+    rm /tmp/peco.tar.gz
+fi
+
+chmod +x $EXEC
+exec $EXEC $@
