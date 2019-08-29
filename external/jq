@@ -1,0 +1,19 @@
+#!/bin/bash
+
+DIR=$HOME/bin/stuff
+EXEC=$DIR/jq
+
+mkdir -p $DIR
+if [ -f $EXEC ]; then
+    exec $EXEC $@
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+    URL=https://github.com/stedolan/jq/releases/download/jq-1.6/jq-osx-amd64
+else
+    URL=https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64
+fi
+
+wget -O $EXEC $URL
+chmod +x $EXEC
+exec $EXEC $@
