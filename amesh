@@ -20,7 +20,8 @@ snap-current() {
 }
 
 snap-animation() {
-    for i in {0..9}; do
+    n=$1
+    for i in $(seq 0 $((n - 1))); do
         snap-current $i
         mv $OUT "/tmp/amesh.animation.$(printf "%03d" $(( 100 - i )) ).gif"
     done
@@ -31,8 +32,16 @@ snap-animation() {
 while [ $# -gt 0 ]; do
     case "$1" in
         -a | -A )
-            ANIMATION=1
-            shift
+            case "$2" in
+                [0-9]* )
+                    ANIMATION=$2
+                    shift 2
+                    ;;
+                * )
+                    ANIMATION=20
+                    shift
+                    ;;
+            esac
             ;;
         * )
             OUT=$1
@@ -46,7 +55,7 @@ wget -O $MASK http://tokyo-ame.jwa.or.jp/map/msk000.png
 if [ "$ANIMATION" -eq 0 ]; then
     snap-current
 else
-    snap-animation
+    snap-animation "$ANIMATION"
 fi
 rm $MAP $MASK $CLOUD /tmp/amesh_tmp.jpg
 echo "$OUT generated" >&2
