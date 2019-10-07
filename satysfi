@@ -1,0 +1,41 @@
+#!/bin/bash
+
+DOCKER_TAG=amutake/satysfi:latest
+
+for dep in docker; do
+    if ! which $dep >/dev/null; then
+        echo "$dep required"
+        exit 1
+    fi
+done
+
+usage() {
+    cat <<EOM
+NAME - satysfi (a docker wrapper)
+
+SYNOPSIS
+
+  # compile documents
+  > satysfi input.saty
+
+  # update docker image
+  > satysfi update
+EOM
+    exit
+}
+
+case "$1" in
+
+    install | update )
+        docker pull ${DOCKER_TAG}
+        ;;
+
+    *.saty )
+        docker run --rm -v ${PWD}:/home/opam/satysfi ${DOCKER_TAG} satysfi "$1"
+        ;;
+
+    * )
+        usage
+        ;;
+
+esac
