@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import click
+import sys
+from imagededup.methods import PHash
+
+
+@click.command()
+@click.argument('image1', type=click.Path(exists=True))
+@click.argument('image2', type=click.Path(exists=True))
+def main(image1, image2):
+    hasher = PHash()
+    hash1 = hasher.encode_image(image1)
+    hash2 = hasher.encode_image(image2)
+    if hash1 != hash2:
+        click.secho(f"< {hash1}", err=True)
+        click.secho(f"> {hash2}", err=True)
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
