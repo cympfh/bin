@@ -1,0 +1,16 @@
+#!/usr/bin/env python
+
+import click
+from imagededup.methods import AHash, PHash
+
+
+@click.command()
+@click.argument('image', type=click.Path(exists=True))
+def main(image):
+    phash = PHash().encode_image(image)
+    ahash = AHash().encode_image(image)
+    click.echo(f"{phash}{ahash}")
+
+
+if __name__ == '__main__':
+    main()
