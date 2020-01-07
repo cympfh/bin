@@ -15,7 +15,7 @@ k2c() {
 }
 
 unix2locale() {
-    if ( date --version >/dev/null 2>&1 ); then
+    if ( date --date "@0" >/dev/null 2>&1 ); then
         # GNU
         date --date "@$1" +"%m-%d %H:%M"
     else
