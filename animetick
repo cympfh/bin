@@ -49,7 +49,7 @@ done
 #
 
 parse-datetime() {
-    echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1/\2/\3 \4:\5,g'
+    echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\),\1-\2-\3 \4:\5,g'
 }
 
 URL="http://animetick.net/users/ampeloss/ics?h=00f6a1846575e9eff488e118b7626417"
