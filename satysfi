@@ -30,12 +30,12 @@ case "$1" in
         docker pull ${DOCKER_TAG}
         ;;
 
-    *.saty )
-        docker run --rm -v ${PWD}:/home/opam/satysfi ${DOCKER_TAG} satysfi "$1"
+    help )
+        usage
         ;;
 
     * )
-        usage
+        docker run --rm -v ${PWD}:/satysfi ${DOCKER_TAG} satysfi "$@"
         ;;
 
 esac
