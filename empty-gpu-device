@@ -2,13 +2,12 @@
 
 usage() {
     cat <<EOM
-Usage: empty-gpu-device [<NUM>=1]
+Usage: empty-gpu-device
 
   Find most empty gpu devices.
+  If multiple device found, choose one randomly.
 EOM
 }
-
-NUM=1
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -17,17 +16,24 @@ while [ $# -gt 0 ]; do
             exit
             ;;
         * )
-            NUM=$1
             shift
             ;;
     esac
 done
 
 if which nvidia-smi >/dev/null; then
-    nvidia-smi | grep Default | awk '{print $9}' | cat -n | sed 's/.iB$//g' | sort -n -k 2 |
-    head -n $NUM |
-    awk '{print $1 - 1}' |
-    tr '\n' ',' | sed 's/,$/\n/g'
+    nvidia-smi |
+      awk '/Default/ {print $9}' |
+      tr -cd '[0-9\n]' |
+      cat -n
+    nvidia-smi |
+      awk '/Default/ {print $9}' |
+      tr -cd '[0-9\n]' |
+      cat -n |
+      shuf |
+      awk 'BEGIN { id=-1; minval = 1000000000 }
+          {if($2 < minval) {id = $1 - 1; minval = $2}}
+          END { print id }'
 else
-    echo 0  # dummy
+    echo -1  # dummy
 fi
