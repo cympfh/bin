@@ -1,0 +1,30 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+NAME - venv
+
+SYNOPSIS
+
+    venv new
+        make new env
+        PATH to ./.venv/bin
+
+    venv clear
+        remove the env
+
+EOM
+    exit
+}
+
+case "$1" in
+    new )
+        python -m venv ./.venv
+        ;;
+    clear )
+        rm -r .venv
+        ;;
+    * )
+        usage
+        ;;
+esac
