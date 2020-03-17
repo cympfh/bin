@@ -1,0 +1,46 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+Docker alias for WSL!
+
+SYNOPSIS
+    (alias)docker [args...] -> (true)docker [args...]
+
+    (alias)docker run [args...] -> (true)docker run --network=host [args...]
+
+    (alias)docker build [args...] -> (true)docker build --network=host [args...]
+
+    (alias)docker [args1...] --native [args2...] -> DOCKER_HOST=tcp://127.0.0.1:2375 docker [args1...] [args2...]
+EOM
+    exit
+}
+
+if [ ! -d /mnt/c/Windows/ ]; then  # not on WSL
+    /usr/bin/docker $@
+    exit
+fi
+
+CMD=/usr/bin/docker
+while [ $# -gt 0 ]; do
+    case "$1" in
+        build )
+            CMD="$CMD build --network=host"
+            shift
+            ;;
+        run )
+            CMD="$CMD run --network=host"
+            shift
+            ;;
+        --native )
+            CMD="DOCKER_HOST=tcp://127.0.0.1:2375 $CMD"
+            shift
+            ;;
+        * )
+            CMD="$CMD $1"
+            shift
+            ;;
+    esac
+done
+
+bash -c "$CMD"
