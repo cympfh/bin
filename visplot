@@ -39,7 +39,7 @@ def make_keys(data, key_names):
     keys = []
     for name in key_names:
         if '*' in name:
-            pattern = re.compile(re.sub('\*', '.*', name))
+            pattern = re.compile(re.sub('*', '.*', name))
             for k in all_keys:
                 if pattern.fullmatch(k):
                     keys.append(k)
@@ -75,11 +75,16 @@ def get(item, key, index=0):
 @click.option('--title')
 @click.option('--x-label')
 @click.option('--y-label')
+@click.option('--y-min', default=None, type=float)
+@click.option('--y-max', default=None, type=float)
 @click.option('--smoothing', default=0, type=int, help='Simple Moving Average with recent N items')
 @click.option('--interval', '-i', default=-1, type=int,
               help='plot auto-refresh interval (sec); when negative, disabled (default=-1)')
 @click.argument('logpath')
-def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
+def main(port, x, y, title,
+         x_label, y_label,
+         y_min, y_max,
+         smoothing, interval, logpath):
 
     data = [json.loads(line) for line in open(logpath) if not is_comment(line)]
     title = title if title else logpath
@@ -123,6 +128,14 @@ def main(port, x, y, title, x_label, y_label, smoothing, interval, logpath):
         opts['xlabel'] = x_label
     if y_label:
         opts['ylabel'] = y_label
+    if y_max:
+        opts['ytickmax'] = y_max
+
+    # range
+    if y_min or y_max:
+        opts['ytickmin'] = y_min or Y.min()
+        opts['ytickmax'] = y_max or Y.max()
+
     win = plot.line(Y, X, opts=opts)
 
     if interval <= 0:
