@@ -1,9 +1,36 @@
 #!/bin/bash
 
-URL="$1"
-curl -sL "${URL}" |
-    nkf |
-    tr -d '\n' |
-    sed 's/<body.*//g' |
-    grep -o '<title>[^<]*<' |
-    sed 's/^<title>//; s/<$//'
+usage() {
+    cat <<EOM
+SYNOPSIS
+    $ html-title "\${WEB_URL}"
+    $ cat "\${HTML_CONTENT}" | html-title
+EOM
+    exit
+}
+
+title-grep() {
+    if which web-grep >/dev/null; then
+        web-grep '<title>{}</title>'
+    else
+        nkf |
+            tr -d '\n' |
+            sed 's/<body.*//g' |
+            grep -o '<title>[^<]*<' |
+            sed 's/^<title>//; s/<$//'
+    fi
+}
+
+if [ $# -eq 0 ]; then
+    cat | title-grep
+else
+    case "$1" in
+        -h | --help )
+            usage
+            exit
+            ;;
+        * )
+            curl -sL "$1" | title-grep
+            ;;
+    esac
+fi
