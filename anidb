@@ -1,0 +1,69 @@
+#!/bin/bash
+
+CLIENT=animeta
+CLIENT_VER=1
+CACHE_DIR=~/.cache/anidb
+mkdir -p $CACHE_DIR
+
+usage() {
+    cat <<EOM
+Usage:
+    anidb <anime_id>
+
+See: https://anidb.net/
+EOM
+    exit
+}
+
+[ $# -ne 1 ] && usage
+
+fetch_xml() {
+    curl -s "http://api.anidb.net:9001/httpapi?client=${CLIENT}&clientver=${CLIENT_VER}&protover=1&request=anime&aid=15293" |
+        gunzip -d
+}
+
+xml() {
+    [ -f $CACHE_DIR/$1.xml ] || fetch_xml > $CACHE_DIR/$1.xml
+    cat $CACHE_DIR/$1.xml
+}
+
+term() {
+    INDENT=${2:-0}
+    yes ' ' | head -n $INDENT | tr -d '\n'
+    echo -n "$1: "
+}
+
+yaml() {
+    aid="$1"
+
+    term aid
+    echo $aid
+
+    term type
+    xml $aid | web-grep '<type>{}</type>'
+
+    term episodecount
+    xml $aid | web-grep '<episodecount>{}</episodecount>'
+
+    term title
+    xml $aid | web-grep '<titles><title xml:lang=ja>{}</title></titles>'
+
+    term date
+    echo
+    term start 2
+    echo -n "!!str "
+    xml $aid | web-grep '<startdate>{}</startdate>'
+    term end 2
+    echo -n "!!str "
+    xml $aid | web-grep '<enddate>{}</enddate>'
+
+    term cast
+    echo
+    xml $aid | web-grep '<seiyuu>{}</seiyuu>' | sed 's/^/- /g'
+}
+
+json() {
+    yaml $1 | yaml2json
+}
+
+json "$1"
