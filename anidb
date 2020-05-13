@@ -55,34 +55,42 @@ yaml() {
 
     term type
     xml $aid | web-grep '<type>{}</type>'
+    echo
 
     term episodecount
     xml $aid | web-grep '<episodecount>{}</episodecount>'
+    echo
 
     term title
     xml $aid | web-grep '<titles><title xml:lang=ja>{}</title></titles>' |
         join
+    echo
 
     term date
     echo
     term start 2
     echo -n "!!str "
     xml $aid | web-grep '<startdate>{}</startdate>'
+    echo
     term end 2
     echo -n "!!str "
     xml $aid | web-grep '<enddate>{}</enddate>'
+    echo
 
     term cast
     echo
     xml $aid | web-grep '<seiyuu>{}</seiyuu>' | sed 's/^/- /g'
+    echo
 
     term company
     echo
     xml $aid | web-grep '<name type="Animation Work">{}</name>' | sed 's/^/- /g'
+    echo
 
     term picture
     echo
     xml $aid | web-grep '<picture>{}</picture>' | sed 's/^/- /g'
+    echo
 }
 
 json() {
