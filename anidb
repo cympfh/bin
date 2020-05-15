@@ -62,7 +62,7 @@ yaml() {
     echo
 
     term title
-    xml $aid | web-grep '<titles><title xml:lang=ja>{}</title></titles>' |
+    xml $aid | web-grep '<titles><title xml:lang=ja type="official">{}</title></titles>' |
         join
     echo
 
