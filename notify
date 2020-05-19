@@ -23,38 +23,38 @@ nopackage() {
 }
 
 # args
-while [ ! -z "$1" ]; do
-  case $1 in
-    --title | -title )
-      TITLE=$2
-      shift 2
-      ;;
-    --subtitle | --sub | -subtitle | -sub )
-      SUBTITLE=$2
-      shift 2
-      ;;
-    --icon | -icon )
-      ICON=$2
-      shift 2
-      ;;
-    --help | -h | -? )
-      usage
-      ;;
-  --sound | -S )
-      SOUND=1
-      shift
-      ;;
-    * )
-      MESSAGE=$1
-      shift 1
-      ;;
-  esac
+while [ -n "$1" ]; do
+    case $1 in
+        --title | -title )
+            TITLE=$2
+            shift 2
+            ;;
+        --subtitle | --sub | -subtitle | -sub )
+            SUBTITLE=$2
+            shift 2
+            ;;
+        --icon | -icon )
+            ICON=$2
+            shift 2
+            ;;
+        --help | -h )
+            usage
+            ;;
+        --sound | -S )
+            SOUND=1
+            shift
+            ;;
+        * )
+            MESSAGE=$1
+            shift 1
+            ;;
+    esac
 done
 
 # exec notify
-if ( which terminal-notifier >/dev/null ); then
+if command -v terminal-notifier >/dev/null; then
     terminal-notifier -title "${TITLE}" -subtitle "${SUBTITLE}" -message "${MESSAGE}" -appIcon "${ICON}"
-elif ( which notify-send >/dev/null ); then
+elif command -v notify-send >/dev/null; then
     if [ -n "${SUBTITLE}" ]; then
         TITLE="${TITLE} - ${SUBTITLE}"
     fi

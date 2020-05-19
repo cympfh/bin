@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+
+import json
+import sys
+import yaml
+
+obj = yaml.load(sys.stdin, Loader=yaml.FullLoader)
+print(json.dumps(obj))

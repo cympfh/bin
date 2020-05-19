@@ -1,0 +1,146 @@
+#!/bin/bash
+
+CLIENT=animeta
+CLIENT_VER=1
+CACHE_DIR=~/.cache/anidb
+[ -f ~/.config/anidb ] && source ~/.config/anidb
+mkdir -p $CACHE_DIR
+
+usage() {
+    cat <<EOM
+Usage:
+    anidb [OPTIONS] <anime_id>
+
+OPTIONS:
+    --format <format>
+        yaml, json (by default)
+
+    --force
+        ignore cache
+
+See: https://anidb.net/
+EOM
+    exit
+}
+
+join() {
+    awk 'BEGIN { FS = RS; RS = "@@@@@@@@@@" }
+    {
+        for (i = 1; i < NF - 1; ++i)
+            printf("%s / ", $i);
+        print($(NF-1))
+    }'
+}
+
+xml() {
+    aid=$1
+    if [ ! -f $CACHE_DIR/$aid.xml ] ; then
+        curl "http://api.anidb.net:9001/httpapi?client=${CLIENT}&clientver=${CLIENT_VER}&protover=1&request=anime&aid=$aid" |
+            gunzip -d > $CACHE_DIR/${aid}.xml
+    fi
+    cat $CACHE_DIR/$aid.xml
+}
+
+term() {
+    INDENT=${2:-0}
+    yes ' ' | head -n $INDENT | tr -d '\n'
+    echo -n "$1: "
+}
+
+yaml() {
+    aid="$1"
+
+    term aid
+    echo $aid
+
+    term type
+    xml $aid | web-grep '<type>{}</type>'
+    echo
+
+    term episodecount
+    xml $aid | web-grep '<episodecount>{}</episodecount>'
+    echo
+
+    term title
+    xml $aid | web-grep '<titles><title xml:lang=ja type="official">{}</title></titles>' |
+        join
+    echo
+
+    term date
+    echo
+    term start 2
+    echo -n "!!str "
+    xml $aid | web-grep '<startdate>{}</startdate>'
+    echo
+    term end 2
+    echo -n "!!str "
+    xml $aid | web-grep '<enddate>{}</enddate>'
+    echo
+
+    term cast
+    echo
+    xml $aid | web-grep '<seiyuu>{}</seiyuu>' | sed 's/^/- /g'
+    echo
+
+    term company
+    echo
+    xml $aid | web-grep '<name type="Animation Work">{}</name>' | sed 's/^/- /g'
+    echo
+
+    term picture
+    echo
+    xml $aid | web-grep '<picture>{}</picture>' | sed 's/^/- /g'
+    echo
+}
+
+json() {
+    aid=$1
+    if [ ! -f $CACHE_DIR/$aid.json ]; then
+        yaml $1 | yaml2json > $CACHE_DIR/$aid.json
+    fi
+    cat $CACHE_DIR/$aid.json
+}
+
+FORMAT=json
+FORCE=0
+AID=
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h | --help )
+            usage
+            ;;
+        --format )
+            FORMAT=$2
+            shift 2
+            ;;
+        --force )
+            FORCE=1
+            shift
+            ;;
+        * )
+            AID=$1
+            shift
+            ;;
+    esac
+done
+
+if [ -z "$AID" ]; then
+    usage
+fi
+
+if [ $FORCE -eq 1 ]; then
+    rm -f $CACHE_DIR/$AID.*
+fi
+
+case "$FORMAT" in
+    json )
+        json "$AID"
+        ;;
+    yaml )
+        yaml "$AID"
+        ;;
+    * )
+        echo "Error: Unknown format $FORMAT"
+        exit 1
+esac
