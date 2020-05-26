@@ -50,6 +50,13 @@ term() {
 yaml() {
     aid="$1"
 
+    # validation
+    if xml $aid | grep '<error>aid Missing or Invalid</error>' >/dev/null ; then
+        echo "aid Missing or Invalid" >&2
+        exit 1
+    fi
+
+    # yaml dumping
     term aid
     echo $aid
 
