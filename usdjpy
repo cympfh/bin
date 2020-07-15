@@ -1,0 +1,6 @@
+#!/bin/bash
+
+echo "   bid    ask    ($(date))"
+curl -sL https://www.gaitameonline.com/rateaj/getrate | jq -r '.quotes[] | if .currencyPairCode == "USDJPY" then "\(.bid) \(.ask)" else empty end'
+
+echo "Ref: 1 USD = 107.85 JPY (2020/06/10)"

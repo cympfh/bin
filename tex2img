@@ -1,0 +1,51 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+Usage: tex2img [INPUT.tex] [OUTPUT.png]
+
+INPUT.tex
+    Fragment file of TeX code.
+    This content be inserted into \\begin{document} ~ \\end{document}
+
+OUTPUT.png
+    png image file path
+EOM
+}
+
+[ $# -ne 2 ] && usage
+
+TEXSOURCE=$1
+OUTPUT=$2
+
+CURRENTDIR=$PWD
+WORKDIR=$(mktemp -d)
+
+cat <<EOM > $WORKDIR/a.tex
+\\documentclass[12pt,dvipdfmx]{amsart}
+\\usepackage{extsizes}
+
+\\usepackage{tikz-cd}
+\\usepackage{amscd}
+
+\\begin{document}
+
+\\thispagestyle{empty}
+
+$(cat $TEXSOURCE)
+
+\\end{document}
+EOM
+
+cd $WORKDIR
+latex a.tex >&2
+convert -strip -density 240 a.pdf -quality 100 -trim a.png >&2
+
+cd $CURRENTDIR
+
+if [ "$OUTPUT" = "-" ]; then  # stdout
+    cat $WORKDIR/a.png
+else
+    mv $WORKDIR/a.png "$OUTPUT"
+fi
+rm -rf $WORKDIR
