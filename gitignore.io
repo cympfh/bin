@@ -13,24 +13,23 @@ SUBCOMMANDS
   help
     displays this
 
-  search <keyword>
-    search templates with a keyword (grep)
+  list
+    list up all available templates
 
-  show <templates...>
-    show your .gitignore
+  show <template-name>
+    show the gitignore template
 
 EOM
     exit
 }
 
 show-template-list() {
-    curl -s https://www.gitignore.io/dropdown/templates.json |
+    curl -s https://www.toptal.com/developers/gitignore/dropdown/templates.json |
         jq -r '.[].id'
 }
 
 show-template() {
-    ids=$(echo "$@" | sed 's/^ *//g; s/ *$//g; s/  */ /g; s/ /,/g')
-    curl -s "https://www.gitignore.io/api/${ids}"
+    curl -s "https://www.toptal.com/developers/gitignore/api/$1"
 }
 
 if [ $# -eq 0 ]; then
@@ -38,18 +37,13 @@ if [ $# -eq 0 ]; then
 fi
 
 case "$1" in
-    help )
-        help
-        ;;
-    search )
-        if [ -z "$2" ]; then
-            echo "No keyword specified"
-            exit 1
-        fi
-        show-template-list | grep -i --color "$2"
+    list )
+        show-template-list
         ;;
     show )
-        shift
-        show-template $@
+        show-template "$2"
+        ;;
+    * )
+      help
         ;;
 esac
