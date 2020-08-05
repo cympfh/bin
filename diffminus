@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require 'set'
+
+y = Set.new open(ARGV[1]).readlines.map(&:chomp)
+
+open(ARGV[0]).readlines.each {|line|
+  puts line if not y.include? line.chomp
+}
