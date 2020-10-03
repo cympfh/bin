@@ -35,7 +35,7 @@ join() {
 xml() {
     aid=$1
     if [ ! -f $CACHE_DIR/$aid.xml ] ; then
-        curl "http://api.anidb.net:9001/httpapi?client=${CLIENT}&clientver=${CLIENT_VER}&protover=1&request=anime&aid=$aid" |
+        curl -s "http://api.anidb.net:9001/httpapi?client=${CLIENT}&clientver=${CLIENT_VER}&protover=1&request=anime&aid=$aid" |
             gunzip -d > $CACHE_DIR/${aid}.xml
     fi
     cat $CACHE_DIR/$aid.xml

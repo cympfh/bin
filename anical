@@ -1,0 +1,95 @@
+#!/bin/bash
+
+usage() {
+  cat << HELP
+NAME
+  animetick -- animetick
+
+SYNOPSIS
+  animetick [ OPTIONS ]
+
+OPTIONS
+  --help, -h
+  --color, -c
+    Colorful Output
+  --ics <google-calendar-url>
+    Get from Annict
+HELP
+  exit 0
+}
+
+#
+# global
+#
+COLOR=0
+ICS=https://annict.com/@cympfh/ics
+
+#
+# parse args
+#
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h | --help )
+      usage
+      ;;
+    --color | -c )
+      COLOR=1
+      ;;
+    --ics )
+      ICS=$2
+      shift 2
+      ;;
+    * )
+      echo "Unknown Option: $1"
+      usage
+      ;;
+  esac
+  shift
+done
+
+#
+# entry
+#
+
+parse-datetime() {
+  date --date $(echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\)Z,\1-\2-\3T\4:\5Z,g') "+%Y-%m-%d %H:%M"
+}
+
+unixtime() {
+  if [ $# -eq 1 ]; then
+    date --date $(echo "$1" | sed 's,^\(....\)\(..\)\(..\)T\(..\)\(..\)\(..\)Z,\1-\2-\3T\4:\5Z,g') "+%s"
+  else
+    date "+%s"
+  fi
+}
+
+CURRENT=$(unixtime)
+
+curl -s $ICS |
+  tr -d '\r' |
+  grep -E '^(DTSTART:[0-9]*T[0-9]*|SUMMARY)' |
+  awk '/SUMMARY/&&dt{print dt; print $0;dt=""} /DTSTART/{dt=$0}' |
+  sed 's/^[^:]*://g' |
+  while :; do
+
+    read dt
+    if [ -z "$dt" ]; then
+      break
+    fi
+    dtlocal="$(parse-datetime "$dt")"
+
+    read title
+
+    # delete old items
+    if [ $(unixtime $dt) -lt $CURRENT ]; then
+      continue
+    fi
+
+    # display
+    if [ $COLOR -eq 0 ]; then
+      echo "$dtlocal $title"
+    else
+      printf "\x1b[33m$dtlocal \x1b[39m$title\x1b[0m\n"
+    fi
+
+  done | sort
