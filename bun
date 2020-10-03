@@ -93,8 +93,7 @@ esa-plot() {
 
     set timefmt '%Y-%m-%d %H:%M'
     set xdata time
-    set format x '%m/%d'
-    set xtics 14400 rotate by 90 right
+    set format x '%m/%d %H:%M'
     set yrange [0:1]
     unset ylabel
     unset ytics
@@ -103,20 +102,25 @@ esa-plot() {
     set style line 11 lc rgb '#808080' lt 1 lw 2
     set border 0 back ls 11
 
+    # xtics
+    set xtics 21600 rotate by 90 right
+    set mxtics 6
+
     # grid line
-    set style line 12 lc rgb '#808080' lt 0 lw 3
-    set grid back ls 12
+    set style line 12 lc rgb '#808080' lt 0 lw 1
+    set grid xtics back ls 12
+    set grid mxtics back ls 12
 
     # main box
     set style line 1 pt 6 lw 2 lc rgb "#00aaaa"
     set style line 2 pt 6 lw 1 lc rgb "#ff8888"
 
     # box style
-    set style fill solid border lc rgb "gray"
-    set boxwidth 1000 absolute
+    set style fill solid
 
-    plot '$DAT' u 1:(1) w boxes ls 1 notitle,\\
-        '< date "+%Y-%m-%d %H:%M"' u 1:(1) w boxes ls 2 notitle,\\
+    plot \\
+        '< date "+%Y-%m-%d %H:%M"' u 1:(1):(100) w boxes ls 2 notitle,\\
+        '$DAT' u 1:(1):(300) w boxes ls 1 notitle,\\
         '< sed "s/ .*/&&/g" $DAT' u (timecolumn(1) - 2400):(0.15 + 0.1 * \$0):3 with labels rotate by 90 notitle
 EOM
     convert $PNG -rotate 90 $PNG_ROT
