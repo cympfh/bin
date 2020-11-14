@@ -1,0 +1,24 @@
+#!/usr/bin/env python
+
+import click
+import jinja2
+
+
+@click.command()
+@click.argument("j2_file_path", type=click.Path(exists=True))
+@click.option("-e", multiple=True)
+@click.option("--verbose", "-v", is_flag=True, default=False)
+def main(j2_file_path, e, verbose):
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader("."))
+    template = env.get_template(j2_file_path)
+    params = {}
+    for keyval in e:
+        key, val = keyval.split("=", 1)
+        params[key] = val
+    if verbose:
+        click.secho(f"Parameters: {params}", fg="red", err=True)
+    click.echo(template.render(**params))
+
+
+if __name__ == "__main__":
+    main()
