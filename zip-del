@@ -1,0 +1,13 @@
+#!/bin/bash
+
+ZIPFILE="$1"
+
+files() {
+  unzip -l "$ZIPFILE" | tail -n +4 | head -n -2 | sort -V -k 4,4
+}
+
+target-files() {
+  files | peco | awk '{print $4}'
+}
+
+zip -d "$ZIPFILE" $(target-files)
