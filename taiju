@@ -1,0 +1,82 @@
+#!/bin/bash
+
+PNG=/tmp/w.png
+URL=http://s.cympfh.cc/cympfh/taiju
+
+usage() {
+    cat <<EOM
+
+$ taiju memo <weight-kg>
+    memo & plot
+
+$ taiju plot
+    just plot
+
+EOM
+    exit
+}
+
+record() {
+    bash ~/.dots/i3/i3-memo.sh add TAIJU "$1.kg"
+    echo "{\"datetime\": \"$(date "+%Y-%m-%d %H:%M")\", \"weight\": $1}" >/tmp/data
+    curl -H "X-KEY: ${IK_KEY}" -XPOST "${URL}" --data @/tmp/data
+}
+
+plot() {
+
+    DAT=/tmp/w.jsonl
+    curl -s "${URL}" | cut -d '	' -f 2 |
+        jq -r '"\(.datetime) \(.weight)"' |
+        tac |
+        awk 'BEGIN{alpha=0.4}{w = NR%30==1 ? $3 : w*alpha+$3*(1-alpha)}{print $1,$2,w}' |
+        tac |
+        cat > $DAT
+
+    gnuplot <<EOM
+    set terminal pngcairo size 1200,600
+    set output '${PNG}'
+
+    set timefmt '%Y-%m-%d %H:%M'
+    set xdata time
+    set format x '%Y-%m'
+    set xtics rotate by 45 right
+    set ylabel 'kg' tc '#808080'
+    set xrange ["2017-04-01":]
+
+    set style line 11 lc rgb '#808080' lt 1 lw 2
+    set border 0 back ls 11
+    set tics out nomirror
+
+    # Standard grid
+    set style line 12 lc rgb '#808080' lt 0 lw 1
+    set grid back ls 12
+
+    # main line
+    set style line 1 pt 6 lw 2 lc rgb "#00aaaa"
+
+    plot '$DAT' u 1:3 w points ls 1 notitle ,\
+        '' u 1:3 smooth sbezier ls 1 notitle ,\
+        '< tail -1 $DAT' u 1:(\$3+0.7):(strftime("%m/%d", time(\$1)) . "\n" . sprintf("%.1fkg",\$3)) with labels notitle
+EOM
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+case "$1" in
+    memo | record )
+        record "$2"
+        plot
+        feh "${PNG}" &
+        echo "$PNG"
+        ;;
+    plot )
+        plot
+        echo "$PNG"
+        feh "${PNG}" &
+        ;;
+    help | --help | -h | -? )
+        usage
+        ;;
+esac

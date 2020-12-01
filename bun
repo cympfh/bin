@@ -25,8 +25,7 @@ EOM
 }
 
 post() {
-    KEY=KjYqoBjVPIaAfhwqr
-    curl -s -H "X-KEY: $KEY" -XPOST "${URL}/$1" --data @-
+    curl -s -H "X-KEY: ${IK_KEY}" -XPOST "${URL}/$1" --data @-
 }
 
 get() {
