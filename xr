@@ -7,60 +7,107 @@ NAME
     xr -- xrandr wrapper
 
 SYNOPSIS
-    xr {main|sub|off} <monitor> [<mode>]
+    xr {main|sub|off} [<monitor>] [<mode>]
       main -- main monitor
       sub  -- sub monitor (2nd display or projector)
       off  -- stop using the monitor
-      (try \`xrandr -q\` to see your monitors)
+        Hint: try \`xrandr -q\` to see your monitors
+      If monitor and mode are omitted, You can choose via peco.
 
-    xr q
-      alias to \`xrandr -q\`
+    xr help
+      Print this.
 HELP
   exit 0
 }
 
+choose-monitor() {
+  xrandr -q | grep ' connected' | awk '{print $1}' | peco
+}
+
+choose-mode() {
+  xrandr -q | grep -A 100 $1 |
+    awk "BEGIN { flg = 0 }
+      /^ / && flg { print }
+      !/^ / && flg { flg = 0 }
+      \$1 == \"$1\" { flg = 1 }" |
+    awk '{print $1}' |
+    peco
+}
+
+xrand-off() {
+  if [ "_$1" = "_" ]; then
+    echo "No monitor selected"
+    exit
+  fi
+  xrandr --output $1 --off
+}
+
+xrandr-main() {
+  if [ "_$1" = "_" ]; then
+    echo "No monitor selected"
+    exit
+  fi
+  if [ "_$2" = "_" ]; then
+    echo "No mode selected"
+    exit
+  fi
+  xrandr --output $1 --mode $2 --auto
+}
+
+xrandr-sub() {
+  if [ "_$1" = "_" ]; then
+    echo "No monitor selected"
+    exit
+  fi
+  if [ "_$2" = "_" ]; then
+    echo "No mode selected"
+    exit
+  fi
+  MAIN=$( xrandr -q | grep ' connected primary' | head -1 | awk '$0=$1' )
+  xrandr --output $1 --right-of $MAIN --mode $2 --auto
+}
+
 [ $# -eq 0 ] && help
 
-case $1 in
-  off )
-    xrandr --output $2 --off
+case "${1}_${2}_${3}" in
+  off__ )
+    xrandr-off "$(choose-monitor)"
     ;;
 
-  q )
-    xrandr -q
+  off_* )
+    xrandr-off "$2"
     ;;
 
-  main | sub )
-    TERMINAL=$2
-    MODE=$3
+  main__ )
+    MONITOR="$(choose-monitor)"
+    MODE="$(choose-mode "$MONITOR")"
+    xrandr-main "$MONITOR" "$MODE"
+    ;;
 
-    # when TERMINAL is empty
-    [ "_$TERMINAL" == "_" ] && help
+  main_*_ )
+    MONITOR="$2"
+    MODE="$(choose-mode "$MONITOR")"
+    xrandr-main "$MONITOR" "$MODE"
+    ;;
 
-    # filled by peco when MODE is empty
-    if [ "_$MODE" == "_" ]; then
-      MODE=$( xrandr -q | grep -A100 $TERMINAL |
-        awk 'BEGIN{a=0}substr($0,0,1)!=" "{a+=1}a==1&&substr($0,0,1)==" "{print $1}' |
-        peco
-      )
-    fi
+  main_*_* )
+    xrandr-main "$2" "$3"
+    ;;
 
-    # when peco exits with C-c or something is wrong
-    if [ "_$MODE" == "_" ]; then
-      exit 0
-    fi
+  sub__ )
+    MONITOR="$(choose-monitor)"
+    MODE="$(choose-mode "$MONITOR")"
+    xrandr-sub "$MONITOR" "$MODE"
+    ;;
 
-    case $1 in
+  sub_*_ )
+    MONITOR="$2"
+    MODE="$(choose-mode "$MONITOR")"
+    xrandr-sub "$MONITOR" "$MODE"
+    ;;
 
-      main )
-        xrandr --output $TERMINAL --mode $MODE --auto
-        ;;
-
-      sub )
-        MAIN=$( xrandr -q | grep ' connected primary' | head -1 | awk '$0=$1' )
-        xrandr --output $TERMINAL --right-of $MAIN --mode $MODE --auto
-        ;;
-    esac
+  sub_*_* )
+    xrandr-sub "$2" "$3"
     ;;
 
   * )
