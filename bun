@@ -14,12 +14,6 @@ SYNOPSIS
 
     bun taiju-plot
         tweet a graph
-
-    bun esa
-        record esa datetime && do esa-plot
-
-    bun esa-plot
-        tweet a graph
 EOM
     exit
 }
