@@ -3,44 +3,64 @@
 usage() {
     cat <<EOM
 SYSNOSIS
-  shindan <ID> [NAME]
+  shindan [OPTIONS] <SHINDAN-ID>
 
 ARGS
-  ID         https://shindanmaker.com/311937 -> 311937
-  NAME       Your name (optional)
+  SHINDAN-ID         https://shindanmaker.com/311937 -> 311937
+
+OPTIONS
+  --name <NAME>      Your Name for Shindan. By default, random string will be used.
+  --text             Trim Hashtag and URL
 EOM
     exit
 }
 
 ID=
 USERNAME=$(( RANDOM ))
+TRIM=0
 
 while [ $# -gt 0 ]; do
-    if [ -z "$ID" ]; then
-        ID=$1
-    else
-        USERNAME=$1
-    fi
-    shift
+    case "$1" in
+        --name )
+            USERNAME=$2
+            shift 2
+            ;;
+        --text )
+            TRIM=1
+            shift
+            ;;
+        * )
+            ID=$1
+            shift
+            ;;
+    esac
 done
 
 if [ -z "$ID" ]; then
     usage
 fi
 
-while-textarea() {
-    awk 'BEGIN { v=1 }
-/<\/textarea>/ { v=0 }
-v { print $0 }'
+trim-text() {
+    if [ $TRIM -eq 0 ]; then
+        cat  # Nothing to do
+    else
+        sed 's/#[a-zA-Z0-9_]*//g' |
+        sed 's/http[^ ]*//g'
+    fi |
+        sed 's/^ *//g' |
+        sed 's/ *$//g' |
+        awk '$1'  # remove empty lines
 }
 
-trim() {
-    sed 's/^[ \t]*//g' |
-    sed 's/<[^>]*>//g' |
-    sed '/^$/d'  # empty lines
-}
+BUFFER=$(mktemp)
 
-curl -s "https://shindanmaker.com/$ID" -H 'User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0' -H 'Content-Type: multipart/form-data; boundary=---------------------------2056919927962200798503755374' --data-binary $'-----------------------------2056919927962200798503755374\r\nContent-Disposition: form-data; name="u"\r\n\r\n'$USERNAME$'\r\n-----------------------------2056919927962200798503755374--\r\n' |
-grep -A 10 '<textarea id="modaltweet"' |
-while-textarea |
-trim
+curl -s --dump-header - https://shindanmaker.com/$ID > $BUFFER
+SESSION=$( grep -o '_session=[^;]*' $BUFFER )
+TOKEN=$( web-grep '<input type="hidden" name="_token" value="{}">' $BUFFER )
+curl -sL "https://shindanmaker.com/${ID}" \
+    -H "Cookie: ${SESSION}" \
+    --data-raw "_token=${TOKEN}&name=${USERNAME}" |
+    web-grep '<textarea>{}</textarea>' |
+    trim-text
+
+[ -f "${BUFFER}" ] && rm "${BUFFER}"
