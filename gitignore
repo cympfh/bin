@@ -1,0 +1,53 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+NAME
+  gitignore
+
+SYNOPSIS
+  gitignore list
+    List Up Template Names
+
+  gitignore <TemplateName>
+
+  gitignore help
+    Print this
+
+TemplateName
+  Python, Ruby ...  (See \`gitignore list\` for all)
+EOM
+    exit
+}
+
+list() {
+    curl -sL \
+        -H "Accept: application/vnd.github.v3+json" \
+        https://api.github.com/gitignore/templates |
+        jq -r ".[]"
+}
+
+show() {
+    curl -sL \
+        -H "Accept: application/vnd.github.v3+json" \
+        "https://api.github.com/gitignore/templates/$1" |
+        jq -r ".[]"
+}
+
+if [ $# -eq 0 ]; then
+    usage
+fi
+
+case "$1" in
+    list )
+        list
+        ;;
+    help )
+        usage
+        ;;
+    * )
+        show "$1"
+        ;;
+esac
+
+# vim: set ft=bash:
