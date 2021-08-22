@@ -60,6 +60,11 @@ plot() {
 EOM
 }
 
+report() {
+    tw-cd dotrss
+    tw -f "${PNG}"
+}
+
 if [ $# -eq 0 ]; then
     usage
 fi
@@ -69,6 +74,7 @@ case "$1" in
         record "$2"
         plot
         feh "${PNG}" &
+        report
         echo "$PNG"
         ;;
     plot )
