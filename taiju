@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PNG=/tmp/w.png
+PNG=$HOME/Pictures/w.png
 URL=http://s.cympfh.cc/cympfh/taiju
 
 usage() {
@@ -32,6 +32,8 @@ plot() {
         tac |
         cat > $DAT
 
+    DT_FROM=$(date --date '2 year ago' "+%Y-%m-%d")
+
     gnuplot <<EOM
     set terminal pngcairo size 1200,600
     set output '${PNG}'
@@ -41,7 +43,7 @@ plot() {
     set format x '%Y-%m'
     set xtics rotate by 45 right
     set ylabel 'kg' tc '#808080'
-    set xrange ["2017-04-01":]
+    set xrange ["${DT_FROM}":]
 
     set style line 11 lc rgb '#808080' lt 1 lw 2
     set border 0 back ls 11
@@ -60,11 +62,6 @@ plot() {
 EOM
 }
 
-report() {
-    tw-cd dotrss
-    tw -f "${PNG}"
-}
-
 if [ $# -eq 0 ]; then
     usage
 fi
@@ -74,7 +71,6 @@ case "$1" in
         record "$2"
         plot
         feh "${PNG}" &
-        report
         echo "$PNG"
         ;;
     plot )
