@@ -1,0 +1,52 @@
+#!/bin/bash
+
+# See: https://github.com/OpenWonderLabs/SwitchBotAPI
+
+usage() {
+    cat <<EOM
+SYNOPSIS
+    $ switchbot devices
+        list up devices
+
+    $ switchbot status <DEVICE_ID>
+        show status
+EOM
+}
+
+# get /v1.0/<API_URI>
+get() {
+    curl -sL \
+        -H "Authorization: $SWITCHBOT_API_TOKEN" \
+        -H "Content-Type: application/json; charset: utf8" \
+        "https://api.switch-bot.com$1"
+}
+
+switchbot-devices() {
+    get "/v1.0/devices"
+}
+
+switchbot-status() {
+    get "/v1.0/devices/$1/status"
+}
+
+if [ $# -eq 0 ]; then
+    usage
+    exit
+fi
+
+case "$1" in
+    help | --help )
+        usage
+        exit
+        ;;
+    devices | device )
+        switchbot-devices
+        ;;
+    status )
+        switchbot-status "$2"
+        ;;
+    * )
+        echo Unknown subcommand $1
+        exit 1
+        ;;
+esac
