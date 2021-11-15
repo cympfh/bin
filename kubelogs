@@ -17,7 +17,7 @@ EOM
 }
 
 pod_filter() {
-    awk "\$1 ~ /$POD_NAME_EXP/"
+    bash -c "awk '\$1 ~ /$POD_NAME_EXP/'"
 }
 
 pods() {
@@ -43,7 +43,7 @@ log_filter() {
 # argparse
 while [ $# -gt 0 ]; do
     case "$1" in
-        --help | -h | help | -? | ? )
+        --help | -h | help )
             usage
             exit
             ;;
