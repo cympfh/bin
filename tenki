@@ -52,7 +52,6 @@ current-icon() {
     TMP=$(mktemp)
     curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" |
     jq -r '.weather[0] | "\(.main) \(.description)"' >"$TMP"
-
     ICONS=(
     lightning:\\u26A1
     thunder:\\u26A1
@@ -65,7 +64,6 @@ current-icon() {
     sun:\\u2600
     clear:\\u2600
     )
-
     ICON_CHAR="\\ufffd"
     for kv in "${ICONS[@]}"; do
         key=${kv%:*}
@@ -76,7 +74,36 @@ current-icon() {
         fi
     done
     echo -e "$ICON_CHAR"
+    rm "$TMP"
+}
 
+current-emoji() {
+    LOC=$1
+    TMP=$(mktemp)
+    curl -s "http://api.openweathermap.org/data/2.5/weather?q=$LOC&appid=$APPID" |
+    jq -r '.weather[0] | "\(.main) \(.description)"' >"$TMP"
+    ICONS=(
+    lightning:⚡
+    thunder:⚡
+    snow:⛄
+    shower:☔
+    rain:☔
+    Haze:🌁
+    fog:🌁
+    cloud:☁
+    sun:🔅
+    clear:🌞
+    )
+    ICON_CHAR="\\ufffd"
+    for kv in "${ICONS[@]}"; do
+        key=${kv%:*}
+        val=${kv#*:}
+        if grep -i "$key" "$TMP" >/dev/null; then
+            ICON_CHAR=$val
+            break
+        fi
+    done
+    echo -e "$ICON_CHAR"
     rm "$TMP"
 }
 
@@ -135,6 +162,7 @@ fi
 #
 FORECAST=
 ICON=0
+EMOJI=1
 LOC=Tokyo
 while [ $# -gt 0 ]; do
     case $1 in
@@ -152,6 +180,12 @@ while [ $# -gt 0 ]; do
             ;;
         --icon | -icon )
             ICON=1
+            EMOJI=0
+            shift
+            ;;
+        --emoji )
+            EMOJI=1
+            ICON=0
             shift
             ;;
         * )
@@ -163,6 +197,8 @@ done
 
 if [ $ICON -eq 1 ]; then
     current-icon "$LOC"
+elif [ $EMOJI -eq 1 ]; then
+    current-emoji "$LOC"
 elif [ -z "$FORECAST" ]; then
     current "$LOC"
 elif [ "$FORECAST" = SAMPLING ]; then
