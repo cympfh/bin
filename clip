@@ -1,0 +1,118 @@
+#!/bin/bash
+
+usage() {
+    wrap=cat
+    if ( command -v bat >/dev/null ); then
+        wrap="bat -l bash --style=plain"
+    fi
+    cat <<EOM | bash -c "$wrap"
+clip - Clipboard Utility for Linux, WSL
+
+SYNOPSIS
+    # Set text
+    $ clip "CLIP THIS TEXT"
+    $ echo "CLIP THIS TEXT" | clip
+    $ clip -i input.txt
+
+    # Get Text
+    $ clip > out.txt
+EOM
+}
+
+err() {
+    echo "$@" >&1
+    exit 1
+}
+
+SOURCE=
+TEXT=
+
+# argparse
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -h | --help )
+            usage
+            exit
+            ;;
+        -i )
+            SOURCE=$2
+            shift 2
+            ;;
+        * )
+            TEXT=$1
+            shift
+            ;;
+    esac
+done
+
+# detect clipboard command
+COMMANDSET=
+if ( command -v xsel >/dev/null ); then
+    COMMANDSET=xsel
+elif ( command -v clip.exe >/dev/null ); then
+    COMMANDSET=clip.exe
+else
+    err "Not found any commands for Clipboard in this System."
+fi
+
+set_text() {
+    TEXT="$1"
+    case "$COMMANDSET" in
+        "clip.exe" )
+            echo "$TEXT" | clip.exe
+            ;;
+        "xsel" )
+            echo "$TEXT" | xsel -bi
+            ;;
+        * )
+            err "Cannot Set-Text for $COMMANDSET"
+            ;;
+    esac
+}
+
+set_text_from_source() {
+    SOURCE="$1"
+    case "$COMMANDSET" in
+        "clip.exe" )
+            cat $SOURCE | clip.exe
+            ;;
+        "xsel" )
+            cat "$SOURCE" | xsel -bi
+            ;;
+        * )
+            err "Cannot Set-Text-From-Source for $COMMANDSET"
+            ;;
+    esac
+}
+
+get_text() {
+    case "$COMMANDSET" in
+        "clip.exe" )
+            powershell.exe /c "Get-Clipboard"
+            ;;
+        "xsel" )
+            xsel -bo
+            ;;
+        * )
+            err "Cannot Get-Text for $COMMANDSET"
+            ;;
+    esac
+}
+
+# main
+if [ ! -t 0 ]; then
+    # Set-Clipboard from stdin
+    set_text_from_source /dev/stdin
+elif [ "$SOURCE" ] || [ "$TEXT" ]; then
+    # Set-Clipboard
+    if [ "$SOURCE" ]; then
+        set_text_from_source "$SOURCE"
+    elif [ "$TEXT" ]; then
+        set_text "$TEXT"
+    else
+        err "Not work (SOURCE=$SOURCE, TEXT=$TEXT)"
+    fi
+else
+    # Get-Clipboard
+    get_text
+fi
