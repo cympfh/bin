@@ -25,6 +25,10 @@ max() {
     (( $1 > $2 )) && echo "$1" || echo "$2"
 }
 
+min() {
+    (( $1 < $2 )) && echo "$1" || echo "$2"
+}
+
 [ $# -eq 0 ] && usage
 
 TIME=
@@ -66,5 +70,6 @@ while :; do
     now=$( date "+%s" )
     (( now >= t )) && break
     dt=$(max 1 $(( t - now - 3 )) )
+    dt=$(min $dt 3600)
     sleep "$dt"
 done
