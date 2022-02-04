@@ -2,17 +2,24 @@
 
 POD_NAME_EXP=
 CONTAINER_NAME=
-TAIL_NUM=10000
-LOG_FILTERING=
+ALL_CONTAINERS=
+TAIL_NUM=100
 
 usage() {
     cat <<EOM
 SYNOPSIS
-    kubelogs
-        --pod "HOGE-.*-WEB"          # awk regexp matching
-        -c \$CONTAINER_NAME           # exact name (if need)
-        -n 2000                      # num for --tail
-        --log "grep -v '200 GET'"    # log filtering command (optional)
+    kubelogs [OPTIONS] <PODNAME_REGEXP>
+
+OPTIONS
+    -c <CONTAINER_NAME>    # Logging from the container
+                           # (This needs if multiple containers exist in the pod)
+    -A, --all-containers   # Logging from all containers
+    -n, --tail             # Number of logging lines
+    --help                 # Display this
+
+PODNAME_REGEXP
+    (Awk-style) Reg-Expression for Pod Name
+
 EOM
 }
 
@@ -25,57 +32,52 @@ pods() {
 }
 
 logs() {
-    if [ "$CONTAINER_NAME" ]; then
+    if [ "$ALL_CONTAINERS" ]; then
+        kubectl logs "$1" --all-containers=true --tail $TAIL_NUM
+    elif [ "$CONTAINER_NAME" ]; then
         kubectl logs "$1" -c "$CONTAINER_NAME" --tail $TAIL_NUM
     else
         kubectl logs "$1" --tail $TAIL_NUM
     fi
 }
 
-log_filter() {
-    if [ "$LOG_FILTERING" ]; then
-        bash -c "$LOG_FILTERING"
-    else
-        cat
-    fi
-}
-
 # argparse
 while [ $# -gt 0 ]; do
     case "$1" in
-        --help | -h | help )
+        --help | -h )
             usage
             exit
-            ;;
-        --pod | -p | -P )
-            POD_NAME_EXP=$2
-            shift 2
             ;;
         -c | -C )
             CONTAINER_NAME=$2
             shift 2
             ;;
-        -n | -N )
+        -A | --all-contain* )
+            ALL_CONTAINERS=1
+            shift
+            ;;
+        -n | --tail )
             TAIL_NUM=$2
             shift 2
             ;;
-        --log | -l | -L )
-            LOG_FILTERING=$2
-            shift 2
-            ;;
         * )
-            echo "Unknown Option: $1" >&2
-            exit 1
+            if [ -z "$POD_NAME_EXP" ]; then
+                POD_NAME_EXP=$1
+                shift
+            else
+                printf "\e[31mUnknown command: $1\e[0m\n" >&2
+                exit 2
+            fi
             ;;
     esac
 done
 
 if [ ! "$POD_NAME_EXP" ]; then
-    echo "--pod must be passed" >&2
+    echo "PODNAME_REGEXP must be passed; See --help"
     exit 1
 fi
 
 for pod in $(pods); do
-    printf "\e[32mChecking $pod\e[0m\n"
-    logs $pod | log_filter
+    printf "\e[32mChecking $pod\e[0m\n" >&2
+    logs $pod
 done
