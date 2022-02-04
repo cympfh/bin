@@ -26,6 +26,7 @@ err() {
 
 SOURCE=
 TEXT=
+DELETE_CARRIAGE_RETURN=1
 
 # argparse
 while [ $# -gt 0 ]; do
@@ -85,6 +86,14 @@ set_text_from_source() {
     esac
 }
 
+delete_carriage_return() {
+    if [ $DELETE_CARRIAGE_RETURN = 1 ]; then
+        tr -d '\r'
+    else
+        cat
+    fi
+}
+
 get_text() {
     case "$COMMANDSET" in
         "clip.exe" )
@@ -96,7 +105,7 @@ get_text() {
         * )
             err "Cannot Get-Text for $COMMANDSET"
             ;;
-    esac
+    esac | delete_carriage_return
 }
 
 # main
