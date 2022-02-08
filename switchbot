@@ -10,6 +10,8 @@ SYNOPSIS
 
     $ switchbot status <DEVICE_ID>
         show status
+
+    $ switchbot send <DEVICE_ID> '<JSON>'
 EOM
 }
 
@@ -20,6 +22,14 @@ get() {
         -H "Content-Type: application/json; charset: utf8" \
         "https://api.switch-bot.com$1"
 }
+post() {
+    curl -sL \
+        -H "Authorization: $SWITCHBOT_API_TOKEN" \
+        -H "Content-Type: application/json; charset: utf8" \
+        -XPOST \
+        "https://api.switch-bot.com$1" \
+        --data "$2"
+}
 
 switchbot-devices() {
     get "/v1.0/devices"
@@ -27,6 +37,10 @@ switchbot-devices() {
 
 switchbot-status() {
     get "/v1.0/devices/$1/status"
+}
+
+switchbot-send() {
+    post /v1.0/devices/$1/commands "$2"
 }
 
 if [ $# -eq 0 ]; then
@@ -44,6 +58,9 @@ case "$1" in
         ;;
     status )
         switchbot-status "$2"
+        ;;
+    send )
+        switchbot-send "$2" "$3"
         ;;
     * )
         echo Unknown subcommand $1
