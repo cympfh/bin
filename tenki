@@ -63,6 +63,7 @@ current-icon() {
     cloud:\\u2601
     sun:\\u2600
     clear:\\u2600
+    mist:\\xf0\\x9f\\x8c\\xab
     )
     ICON_CHAR="\\ufffd"
     for kv in "${ICONS[@]}"; do
@@ -93,6 +94,7 @@ current-emoji() {
     cloud:☁️
     sun:🔅
     clear:🌞
+    mist:🌁
     )
     ICON_CHAR="\\ufffd"
     for kv in "${ICONS[@]}"; do
