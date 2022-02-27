@@ -20,12 +20,13 @@ EOM
 }
 
 err() {
-    echo "$@" >&1
+    echo "$@" >&2
     exit 1
 }
 
 SOURCE=
 TEXT=
+VERBOSE=0
 DELETE_CARRIAGE_RETURN=1
 
 # argparse
@@ -34,6 +35,10 @@ while [ $# -gt 0 ]; do
         -h | --help )
             usage
             exit
+            ;;
+        -v | --verbose )
+            VERBOSE=1
+            shift 1
             ;;
         -i )
             SOURCE=$2
@@ -54,6 +59,10 @@ elif ( command -v clip.exe >/dev/null ); then
     COMMANDSET=clip.exe
 else
     err "Not found any commands for Clipboard in this System."
+fi
+
+if [ "$VERBOSE" = 1 ]; then
+    echo "COMMANDSET=$COMMANDSET" >&2
 fi
 
 set_text() {
