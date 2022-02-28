@@ -11,7 +11,7 @@ EOM
 
 title-grep() {
     if which web-grep >/dev/null; then
-        web-grep '<title>{}</title>'
+        nkf | web-grep '<title>{}</title>'
     else
         nkf |
             tr -d '\n' |
