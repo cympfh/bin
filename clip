@@ -69,7 +69,7 @@ set_text() {
     TEXT="$1"
     case "$COMMANDSET" in
         "clip.exe" )
-            echo "$TEXT" | clip.exe
+            echo "$TEXT" | sed 's/[\r\n]*//g; s/$/\r/g' | nkf -j | clip.exe
             ;;
         "xsel" )
             echo "$TEXT" | xsel -bi
@@ -84,7 +84,7 @@ set_text_from_source() {
     SOURCE="$1"
     case "$COMMANDSET" in
         "clip.exe" )
-            cat $SOURCE | clip.exe
+            cat "$SOURCE" | sed 's/[\r\n]*//g; s/$/\r/g' | nkf -j | clip.exe
             ;;
         "xsel" )
             cat "$SOURCE" | xsel -bi
@@ -106,7 +106,7 @@ delete_carriage_return() {
 get_text() {
     case "$COMMANDSET" in
         "clip.exe" )
-            powershell.exe /c "Get-Clipboard"
+            powershell.exe /c "Get-Clipboard" | nkf | sed 's/[\r\n]*//g' | sed '${/^$/d}'
             ;;
         "xsel" )
             xsel -bo
