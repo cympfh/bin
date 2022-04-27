@@ -69,7 +69,7 @@ set_text() {
     TEXT="$1"
     case "$COMMANDSET" in
         "clip.exe" )
-            echo "$TEXT" | nkf -jc | clip.exe
+            echo "$TEXT" | nkf -c | clip.exe
             ;;
         "xsel" )
             echo "$TEXT" | xsel -bi
@@ -84,7 +84,7 @@ set_text_from_source() {
     SOURCE="$1"
     case "$COMMANDSET" in
         "clip.exe" )
-            cat "$SOURCE" | nkf -jc | clip.exe
+            cat "$SOURCE" | nkf -c | clip.exe
             ;;
         "xsel" )
             cat "$SOURCE" | xsel -bi
