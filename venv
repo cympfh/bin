@@ -13,6 +13,9 @@ SYNOPSIS
     venv clear
         remove the env
 
+    venv clean
+        Re-empty .venv
+
 EOM
     exit
 }
@@ -23,6 +26,10 @@ case "$1" in
         ;;
     clear )
         rm -r .venv
+        ;;
+    clean )
+        rm -r .venv
+        python -m venv ./.venv
         ;;
     * )
         usage
