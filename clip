@@ -9,13 +9,14 @@ usage() {
 clip - Clipboard Utility for Linux, WSL
 
 SYNOPSIS
-    # Set text
+    # Set/Copy Text
     $ clip "CLIP THIS TEXT"
-    $ echo "CLIP THIS TEXT" | clip
-    $ clip -i input.txt
+    $ echo "CLIP THIS TEXT" | clip   # if stdin provided
+    $ clip -i input.txt              # from file
 
-    # Get Text
+    # Get/Paste Text
     $ clip > out.txt
+    $ clip -o                        # force to output (write to stdout)
 EOM
 }
 
@@ -27,7 +28,7 @@ err() {
 SOURCE=
 TEXT=
 VERBOSE=0
-DELETE_CARRIAGE_RETURN=1
+OUTPUT=
 
 # argparse
 while [ $# -gt 0 ]; do
@@ -43,6 +44,10 @@ while [ $# -gt 0 ]; do
         -i )
             SOURCE=$2
             shift 2
+            ;;
+        -o )
+            OUTPUT=1
+            shift 1
             ;;
         * )
             TEXT=$1
@@ -110,9 +115,9 @@ get_text() {
 }
 
 # main
-if [ ! -t 0 ]; then
-    # Set-Clipboard from stdin
-    set_text_from_source /dev/stdin
+if [ "$OUTPUT" ]; then
+    # Get-Clipboard
+    get_text
 elif [ "$SOURCE" ] || [ "$TEXT" ]; then
     # Set-Clipboard
     if [ "$SOURCE" ]; then
@@ -122,6 +127,9 @@ elif [ "$SOURCE" ] || [ "$TEXT" ]; then
     else
         err "Not work (SOURCE=$SOURCE, TEXT=$TEXT)"
     fi
+elif [ ! -t 0 ]; then
+    # Set-Clipboard from stdin
+    set_text_from_source /dev/stdin
 else
     # Get-Clipboard
     get_text
