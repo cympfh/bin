@@ -1,0 +1,93 @@
+#!/bin/bash
+
+usage() {
+  cat <<EOM
+NAME - progressbar
+
+USAGE
+
+  $ progressbar <SUBCOMMAND> <OPTIONS>
+
+SYNOPSYS
+
+  $ progressbar create --total <int>  # create a new progressbar
+  $ progressbar update --total <int> --count <int>  # update progressbar
+  $ progressbar done         # has finished
+
+SUBCOMMAND
+  create
+  update
+  done
+
+OPTIONS
+
+  --total <int>
+    total progress count
+
+  --count <int>
+    finished progress count
+
+EOM
+}
+
+SUBCOMMAND=
+TOTAL=1
+COUNT=0
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --total )
+      TOTAL=$2
+      shift 2
+      ;;
+    --count )
+      COUNT=$2
+      shift 2
+      ;;
+    * )
+      SUBCOMMAND=$1
+      shift
+      ;;
+  esac
+done
+
+progressbar-display() {
+  RATIO=$(( 100 * COUNT / TOTAL ))
+  W=$(tput cols)
+  if (( W > 120 )); then
+    W=120
+  fi
+  W1=$(printf "%3d%% [] %d/%d" "$RATIO" "$COUNT" "$TOTAL" | wc -c)
+  W2=$(( W - W1 ))
+  W_FILL=$(( W2 * COUNT/ TOTAL ))
+  W_EMPTY=$(( W2 - W_FILL ))
+  if (( W_FILL > W2 )) || (( W_EMPTY < 0 )); then
+    W_FILL=$W2
+    W_EMPTY=0
+  fi
+  printf "%3d%% [" "$RATIO"
+  yes ">" | head -n "$W_FILL" | tr -d '\n'
+  yes "-" | head -n "$W_EMPTY" | tr -d '\n'
+  printf "] %d/%d" "$COUNT" "$TOTAL"
+}
+
+case "$SUBCOMMAND" in
+  create )
+    progressbar-display
+    ;;
+  update )
+    printf "\r"
+    progressbar-display
+    ;;
+  done )
+    printf "\n"
+    ;;
+  help | --help )
+    usage
+    exit
+    ;;
+  * )
+    echo "Invalid command" >&2
+    exit 1
+    ;;
+esac
