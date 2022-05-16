@@ -1,3 +1,4 @@
 #!/bin/bash
 
+printf "\e[1mBOLD\e[0m \e[2mTHIN\e[0m \e[3mITLC\e[0m \e[4mULNE\e[0m\n"
 ruby -e "$(curl -fsSL https://raw.githubusercontent.com/gawin/bash-colors-256/master/colors)"
