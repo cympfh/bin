@@ -1,0 +1,35 @@
+#!/bin/bash
+
+usage() {
+cat <<EOM
+See https://gist.github.com/ZipFile/c9ebedb224406f4f11845ab700124362
+
+SYNOPSIS
+  pixiv-auth login
+    Very tricky.
+    See the URL.
+  pixiv-auth refresh
+    Update your PIXIV_REFRESHTOKEN ($PIXIV_REFRESHTOKEN)
+EOM
+}
+
+BIN=/tmp/pixiv_auth.py
+
+if [ ! -f $BIN ]; then
+  curl https://gist.githubusercontent.com/ZipFile/c9ebedb224406f4f11845ab700124362/raw/c3e2fe2a394a314ea9a22ad1438fc5d691babb8e/pixiv_auth.py >$BIN
+fi
+
+case "$1" in
+  login )
+    python $BIN login
+    ;;
+  refresh )
+    python $BIN refresh "$PIXIV_REFRESHTOKEN"
+    echo "Update your \$PIXIV_REFRESHTOKEN"
+    ;;
+  * )
+    echo Invalid Usage >&2
+    usage
+    exit 2
+    ;;
+esac
