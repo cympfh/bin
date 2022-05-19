@@ -24,7 +24,9 @@ case "$1" in
     python $BIN login
     ;;
   refresh )
-    python $BIN refresh "$PIXIV_REFRESHTOKEN"
+    python $BIN refresh "$PIXIV_REFRESHTOKEN" |
+      sed 's/access_token: /export PIXIV_ACCESSTOKEN=/' |
+      sed 's/refresh_token: /export PIXIV_REFRESHTOKEN=/'
     echo "Update your \$PIXIV_REFRESHTOKEN"
     ;;
   * )

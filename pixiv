@@ -67,5 +67,13 @@ def download(output_dir: str, illust_id: int):
         print(output)
 
 
+@main.command()
+def check():
+    """Sanity check"""
+    pixiv = Pixiv()
+    detail = pixiv.detail(97783294)
+    assert detail.get("illust", {}).get("id") == 97783294
+
+
 if __name__ == "__main__":
     main()
