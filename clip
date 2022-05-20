@@ -103,7 +103,7 @@ set_text_from_source() {
 get_text() {
     case "$COMMANDSET" in
         "clip.exe" )
-            powershell.exe /c "Get-Clipboard" | nkf -d | sed '${/^$/d}'
+            powershell.exe /c "Get-Clipboard" | nkf -d | sed '${/^$/d}' | nkf
             ;;
         "xsel" )
             xsel -bo
