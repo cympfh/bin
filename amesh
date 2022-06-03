@@ -6,17 +6,51 @@ MASK=/tmp/mask.png
 CLOUD=/tmp/cloud.gif
 
 ANIMATION=0
+LABEL=0
+
+usage() {
+    cat <<EOM
+NAME - amesh
+
+SYNOPSIS
+    amesh
+        current snapshot
+    amesh -A
+        animated gif
+    amesh --label
+        insert label
+
+EOM
+    exit
+}
+
+cloud-dt() {
+    offset=${1:-0}
+    date -d @"$(( ( $(date "+%s") - 200 ) / 300 * 300 - offset * 300 ))" "+%Y%m%d%H%M"
+}
+
+cloud-dt-human() {
+    offset=${1:-0}
+    LANG=C LC_ALL=C date -d @"$(( ( $(date "+%s") - 200 ) / 300 * 300 - offset * 300 ))"
+}
 
 cloud-url() {
-    offset=${1:-0}
-    DT=$( date -d @"$(( ( $(date "+%s") - 200 ) / 300 * 300 - offset * 300 ))" "+%Y%m%d%H%M" )
+    DT=$1
     echo "http://tokyo-ame.jwa.or.jp/mesh/000/${DT}.gif"
 }
 
 snap-current() {
-    wget -O $CLOUD $(cloud-url $1)
+    dt=$(cloud-dt $1)
+    wget -O $CLOUD $(cloud-url $dt)
     convert $MAP $CLOUD -compose over -composite /tmp/amesh_tmp.jpg
     convert /tmp/amesh_tmp.jpg $MASK -compose over -composite $OUT
+    if [ "$LABEL" = 1 ]; then
+        mv $OUT /tmp/amesh_tmp.jpg
+        DT=$(cloud-dt-human $1)
+        convert /tmp/amesh_tmp.jpg \
+            -pointsize 13 -fill black -undercolor white -annotate +0+12 "$DT" \
+            $OUT
+    fi
 }
 
 snap-animation() {
@@ -31,6 +65,9 @@ snap-animation() {
 
 while [ $# -gt 0 ]; do
     case "$1" in
+        -h | --help )
+            usage
+            ;;
         -a | -A )
             case "$2" in
                 [0-9]* )
@@ -42,6 +79,10 @@ while [ $# -gt 0 ]; do
                     shift
                     ;;
             esac
+            ;;
+        --label | -L )
+            LABEL=1
+            shift
             ;;
         * )
             OUT=$1
