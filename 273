@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+
+import subprocess
+import click
+
+
+def run(cmd: str) -> str:
+    click.secho(cmd, fg="green", err=True)
+    p = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+    if p.stderr:
+        raise Exception(p.stderr)
+    return p.stdout
+
+
+@click.group()
+def main():
+    pass
+
+
+@main.command("sso-login")
+@click.option("-p", "--profile", type=str, default="")
+def sso_login(profile: str):
+    if profile:
+        cmd = f"aws sso login --profile {profile}"
+    else:
+        cmd = "aws sso login"
+    run(cmd)
+
+
+@main.group()
+def s3():
+    pass
+
+
+@s3.command()
+@click.option("-p", "--profile", type=str, default="")
+@click.option("-b", "--bucket", type=str, default="")
+def ls(profile: str, bucket: str):
+    """list of buckets/objects"""
+    if not bucket:
+        if profile:
+            cmd = f"aws s3 ls --profile {profile}"
+        else:
+            cmd = "aws s3 ls"
+    else:
+        if profile:
+            cmd = f"aws s3api list-objects --bucket {bucket} --profile {profile} | jq -c '.Contents[]'"
+        else:
+            cmd = f"aws s3api list-objects --bucket {bucket} | jq -c '.Contents[]'"
+    print(run(cmd))
+
+
+if __name__ == "__main__":
+    main()
