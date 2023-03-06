@@ -27,12 +27,17 @@ OPTIONS
   --count <int>
     finished progress count
 
+  --fill-char <char>
+  --empty-char <char>
+
 EOM
 }
 
 SUBCOMMAND=
 TOTAL=1
 COUNT=0
+FILLCHAR="#"
+EMPTYCHAR=" "
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -42,6 +47,14 @@ while [ $# -gt 0 ]; do
       ;;
     --count )
       COUNT=$2
+      shift 2
+      ;;
+    --fill-char )
+      FILLCHAR=$2
+      shift 2
+      ;;
+    --empty-char )
+      EMPTYCHAR=$2
       shift 2
       ;;
     * )
@@ -66,8 +79,8 @@ progressbar-display() {
     W_EMPTY=0
   fi
   printf "%3d%% [" "$RATIO"
-  yes ">" | head -n "$W_FILL" | tr -d '\n'
-  yes "-" | head -n "$W_EMPTY" | tr -d '\n'
+  yes "$FILLCHAR" | head -n "$W_FILL" | tr -d '\n'
+  yes "$EMPTYCHAR" | head -n "$W_EMPTY" | tr -d '\n'
   printf "] %d/%d" "$COUNT" "$TOTAL"
 }
 
