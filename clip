@@ -1,5 +1,8 @@
 #!/bin/bash
 
+TMP_WSL=~/Downloads/clip.txt
+TMP_WIN="C:/Users/${USER}/Downloads/clip.txt"
+
 usage() {
     wrap=cat
     if ( command -v bat >/dev/null ); then
@@ -8,15 +11,13 @@ usage() {
     cat <<EOM | bash -c "$wrap"
 clip - Clipboard Utility for Linux, WSL
 
-SYNOPSIS
-    # Set/Copy Text
-    $ clip "CLIP THIS TEXT"
-    $ echo "CLIP THIS TEXT" | clip   # if stdin provided
-    $ clip -i input.txt              # from file
+Copy:
+  cat {file} | clip
+  clip -i {file}
 
-    # Get/Paste Text
-    $ clip > out.txt
-    $ clip -o                        # force to output (write to stdout)
+Paste:
+  clip
+  clip -o {file}
 EOM
 }
 
@@ -26,9 +27,7 @@ err() {
 }
 
 SOURCE=
-TEXT=
-VERBOSE=0
-OUTPUT=
+TARGET=
 
 # argparse
 while [ $# -gt 0 ]; do
@@ -37,21 +36,17 @@ while [ $# -gt 0 ]; do
             usage
             exit
             ;;
-        -v | --verbose )
-            VERBOSE=1
-            shift 1
-            ;;
         -i )
             SOURCE=$2
             shift 2
             ;;
         -o )
-            OUTPUT=1
-            shift 1
+            TARGET=$2
+            shift 2
             ;;
         * )
-            TEXT=$1
-            shift
+            echo "Unknown arg; see --help"
+            exit 1
             ;;
     esac
 done
@@ -66,71 +61,43 @@ else
     err "Not found any commands for Clipboard in this System."
 fi
 
-if [ "$VERBOSE" = 1 ]; then
-    echo "COMMANDSET=$COMMANDSET" >&2
-fi
-
-set_text() {
-    TEXT="$1"
+copy_text() {
     case "$COMMANDSET" in
         "clip.exe" )
-            echo "$TEXT" | nkf -c | clip.exe
+            cat | nkf -s >$TMP_WSL
+            powershell.exe /c "Get-Content $TMP_WIN | Set-Clipboard"
             ;;
         "xsel" )
-            echo "$TEXT" | xsel -bi
+            xsel -bi
             ;;
         * )
-            err "Cannot Set-Text for $COMMANDSET"
+            exit 1
             ;;
     esac
 }
 
-set_text_from_source() {
-    SOURCE="$1"
+paste_text() {
     case "$COMMANDSET" in
         "clip.exe" )
-            cat "$SOURCE" | nkf -c | clip.exe
-            ;;
-        "xsel" )
-            cat "$SOURCE" | xsel -bi
-            ;;
-        * )
-            err "Cannot Set-Text-From-Source for $COMMANDSET"
-            ;;
-    esac
-}
-
-get_text() {
-    case "$COMMANDSET" in
-        "clip.exe" )
-            powershell.exe /c "Get-Clipboard -Raw -Format Text -TextFormat UnicodeText" | nkf -d | sed '${/^$/d}' | nkf
+            powershell.exe /c "Get-Clipboard -Format Text > $TMP_WIN"
+            cat $TMP_WSL | nkf | tr -d '\r'
             ;;
         "xsel" )
             xsel -bo
             ;;
         * )
-            err "Cannot Get-Text for $COMMANDSET"
+            exit 1
             ;;
     esac
 }
 
 # main
-if [ "$OUTPUT" ]; then
-    # Get-Clipboard
-    get_text
-elif [ "$SOURCE" ] || [ "$TEXT" ]; then
-    # Set-Clipboard
-    if [ "$SOURCE" ]; then
-        set_text_from_source "$SOURCE"
-    elif [ "$TEXT" ]; then
-        set_text "$TEXT"
-    else
-        err "Not work (SOURCE=$SOURCE, TEXT=$TEXT)"
-    fi
+if [ "$TARGET" ]; then
+    paste_text > $TARGET
+elif [ "$SOURCE" ]; then
+    cat $SOURCE | copy_text
 elif [ ! -t 0 ]; then
-    # Set-Clipboard from stdin
-    set_text_from_source /dev/stdin
+    copy_text
 else
-    # Get-Clipboard
-    get_text
+    paste_text
 fi
