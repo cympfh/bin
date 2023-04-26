@@ -1,0 +1,18 @@
+#!/bin/bash
+
+usage() {
+    cat <<EOM
+$ jrep {query}
+
+Alias for jq 'if {query} then . else empty end'
+EOM
+    exit
+}
+
+if [ $# -eq 1 ]; then
+    jq "if $1 then . else empty end"
+elif [ $# -eq 2 ]; then
+    jq "if $1 then . else empty end" $2
+else
+    exit 1
+fi
