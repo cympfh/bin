@@ -1,0 +1,169 @@
+#!/usr/bin/env python
+
+import json
+import openai
+import os
+import click
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+class ChatGPT:
+    def __init__(self, system_prompt: str = ""):
+        self.messages = []
+        if system_prompt:
+            self.messages = [
+                {
+                    "role": "system",
+                    "content": system_prompt,
+                }
+            ]
+
+    def add_sample(self, user_input: str, assistant_output: str):
+        self.messages.append(
+            {
+                "role": "user",
+                "content": user_input,
+            }
+        )
+        self.messages.append(
+            {
+                "role": "assistant",
+                "content": assistant_output,
+            }
+        )
+
+    def chat(self, user_input: str, model: str) -> str:
+        self.messages.append({"role": "user", "content": user_input})
+        result: dict = openai.ChatCompletion.create(  # type: ignore
+            model=model,
+            messages=self.messages,
+        )
+        content = result.get("choices", [])[0].get("message", {}).get("content")
+        self.messages.append(
+            {
+                "role": "assistant",
+                "content": content,
+            }
+        )
+        return content
+
+
+translator = ChatGPT(
+    """
+    Please translate given text and describe it.
+    Input is given with a function `trans()`.
+"""
+)
+translator.add_sample(
+    "trans(こんにちわ)",
+    json.dumps(
+        {
+            "source": "jp",
+            "target": "en",
+            "text": "Hello",
+            "describe": "昼の挨拶です",
+        }
+    ),
+)
+translator.add_sample(
+    "trans(Hello; target=ja)",
+    json.dumps(
+        {
+            "source": "en",
+            "target": "jp",
+            "text": "こんにちわ",
+            "describe": "昼の挨拶です",
+        }
+    ),
+)
+translator.add_sample(
+    "trans(n is the number of integers we want to sum, which in this case is 100; "
+    "source=en, target=jp, context=数式の説明)",
+    json.dumps(
+        {
+            "source": "en",
+            "target": "jp",
+            "text": "n は合計したい整数の個数でここでは 100 です",
+            "describe": "数式の説明",
+        }
+    ),
+)
+translator.add_sample(
+    "trans(まだ読んでない本が10冊積まれています; target=en)",
+    json.dumps(
+        {
+            "source": "jp",
+            "target": "en",
+            "text": "There are 10 books that I haven't read yet stacked up.",
+            "describe": "",
+        }
+    ),
+)
+translator.add_sample(
+    "trans(晩安; context=夜の挨拶, source=cn, target=en)",
+    json.dumps(
+        {
+            "source": "cn",
+            "target": "en",
+            "text": "Good night",
+            "describe": "Evening greeting",
+        }
+    ),
+)
+translator.add_sample(
+    "trans(Oi!; source=portuguesa, target=ja)",
+    json.dumps(
+        {
+            "source": "portuguesa",
+            "target": "ja",
+            "text": "やあ！",
+            "describe": "注：ポルトガル語の Oi! は、日本語の おい! に当たります。",
+        }
+    ),
+)
+
+
+@click.command()
+@click.option(
+    "--model",
+    "-M",
+    type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
+    default="gpt-3.5-turbo",
+    show_default=True,
+)
+@click.option("--context", "-c", type=str, default=None, help="hint context")
+@click.option("--source", "-s", type=str, default=None, help="source language")
+@click.option("--target", "-t", type=str, default=None, help="target language")
+@click.argument("text", type=str)
+def main(
+    model: str,
+    context: str | None,
+    source: str | None,
+    target: str | None,
+    text: str,
+):
+    options = []
+    if context:
+        options.append(f"context={context}")
+    if source:
+        options.append(f"source={source}")
+    if target:
+        options.append(f"target={target}")
+    if options:
+        prompt = f"trans({text}; {', '.join(options)})"
+    else:
+        prompt = f"trans({text})"
+
+    click.secho(f"[INFO] {model}, {prompt}", fg="green", err=True)
+    output = translator.chat(prompt, model)
+    try:
+        _ = json.loads(output)
+        print(output)
+    except Exception:
+        click.secho("[WARN] Data cannot be parse as JSON", err=True, fg="red")
+        click.echo(output, err=True)
+
+
+if __name__ == "__main__":
+    main()
