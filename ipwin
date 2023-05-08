@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ipconfig.exe | nkf | grep IPv4 | grep 192 | grep -o '192[0-9\.]*' | tr -d ' \n\r'

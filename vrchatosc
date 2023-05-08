@@ -1,0 +1,36 @@
+#!/usr/bin/env python
+
+import click
+from pythonosc import udp_client
+import subprocess
+from typing import Any
+
+
+res = subprocess.run("ipwin", capture_output=True)
+ip = res.stdout.decode()
+port = 9000
+
+
+def cast(typedval: str) -> Any:
+    if typedval.startswith("i:"):
+        return int(typedval.removeprefix("i:"))
+    if typedval.startswith("f:"):
+        return float(typedval.removeprefix("f:"))
+    if typedval.startswith("s:"):
+        return float(typedval.removeprefix("s:"))
+    if typedval.startswith("b:"):
+        return typedval.removeprefix("b:").lower() in {"true", "yes", "1", "t", "y"}
+    return str(typedval)
+
+
+@click.command()
+@click.argument("dest", type=str)
+@click.argument("args", nargs=-1)
+def main(dest: str, args: list[str]):
+    args = [cast(arg) for arg in args]
+    client = udp_client.SimpleUDPClient(ip, port)
+    client.send_message(dest, args)
+
+
+if __name__ == "__main__":
+    main()

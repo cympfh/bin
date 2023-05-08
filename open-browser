@@ -1,0 +1,7 @@
+#!/bin/bash
+
+if [ ! -n "${BROWSER}" ]; then
+  BROWSER=/mnt/c/Users/cympf/AppData/Local/Vivaldi/Application/vivaldi.exe
+fi
+
+${BROWSER} $@
