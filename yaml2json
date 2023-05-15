@@ -4,5 +4,19 @@ import json
 import sys
 import yaml
 
-obj = yaml.load(sys.stdin, Loader=yaml.FullLoader)
-print(json.dumps(obj))
+import click
+
+
+@click.command()
+@click.argument("f", type=click.Path(exists=True), required=False)
+def main(f):
+    if f is None:
+        obj = yaml.load(sys.stdin, Loader=yaml.FullLoader)
+        print(json.dumps(obj))
+    else:
+        obj = yaml.load(open(f, "rt"), Loader=yaml.FullLoader)
+        print(json.dumps(obj))
+
+
+if __name__ == "__main__":
+    main()
