@@ -53,6 +53,7 @@ translator = ChatGPT(
     """
     Please translate given text and describe it.
     Input is given with a function `trans()`.
+    Output is {"source": ${source language}, "target": ${target language}, "text": ${translated text}, "description": ${description}}
 """
 )
 translator.add_sample(
@@ -62,7 +63,7 @@ translator.add_sample(
             "source": "jp",
             "target": "en",
             "text": "Hello",
-            "describe": "昼の挨拶です",
+            "description": "昼の挨拶です",
         }
     ),
 )
@@ -73,7 +74,7 @@ translator.add_sample(
             "source": "en",
             "target": "jp",
             "text": "こんにちわ",
-            "describe": "昼の挨拶です",
+            "description": "昼の挨拶です",
         }
     ),
 )
@@ -85,7 +86,7 @@ translator.add_sample(
             "source": "en",
             "target": "jp",
             "text": "n は合計したい整数の個数でここでは 100 です",
-            "describe": "数式の説明",
+            "description": "数式の説明",
         }
     ),
 )
@@ -96,7 +97,7 @@ translator.add_sample(
             "source": "jp",
             "target": "en",
             "text": "There are 10 books that I haven't read yet stacked up.",
-            "describe": "",
+            "description": "",
         }
     ),
 )
@@ -107,7 +108,7 @@ translator.add_sample(
             "source": "cn",
             "target": "en",
             "text": "Good night",
-            "describe": "Evening greeting",
+            "description": "Evening greeting",
         }
     ),
 )
@@ -118,7 +119,7 @@ translator.add_sample(
             "source": "portuguesa",
             "target": "ja",
             "text": "やあ！",
-            "describe": "注：ポルトガル語の Oi! は、日本語の おい! に当たります。",
+            "description": "注：ポルトガル語の Oi! は、日本語の おい! に当たります。",
         }
     ),
 )
