@@ -4,8 +4,27 @@ import json
 import openai
 import os
 import click
+import requests
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+class DeepL:
+    def __init__(self):
+        key = os.getenv("DEEPL_AUTH_KEY")
+        assert key is not None
+        self.uri = "https://api.deepl.com/v2/translate"
+        self.headers = {
+            "Authorization": f"DeepL-Auth-Key {key}",
+        }
+
+    def run(self, text: str, target_lang: str = "EN") -> dict:
+        data = {
+            "text": text,
+            "target_lang": target_lang,
+        }
+        response = requests.post(self.uri, headers=self.headers, data=data)
+        return response.json()
 
 
 class ChatGPT:
@@ -51,9 +70,10 @@ class ChatGPT:
 
 translator = ChatGPT(
     """
-    Please translate given text and describe it.
+    ## 翻訳タスク
+    Translate the given text and describe it.
     Input is given with a function `trans()`.
-    Output is {"source": ${source language}, "target": ${target language}, "text": ${translated text}, "description": ${description}}
+    Output is {"source": ${source language}, "target": ${target language}, "description": ${どういう意味かの説明}, "text": ${translated text}}
 """
 )
 translator.add_sample(
@@ -129,8 +149,8 @@ translator.add_sample(
 @click.option(
     "--model",
     "-M",
-    type=click.Choice(["gpt-3.5-turbo", "gpt-4"]),
-    default="gpt-3.5-turbo",
+    type=click.Choice(["gpt-3.5-turbo", "gpt-4", "deepl"]),
+    default="deepl",
     show_default=True,
 )
 @click.option("--context", "-c", type=str, default=None, help="hint context")
@@ -144,6 +164,12 @@ def main(
     target: str | None,
     text: str,
 ):
+
+    if model == "deepl":
+        result = DeepL().run(text, target_lang=target or "EN")
+        print(result)
+        return
+
     options = []
     if context:
         options.append(f"context={context}")
