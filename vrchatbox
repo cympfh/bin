@@ -20,7 +20,7 @@ def main(lazy: int, messages: list[str]):
     if lazy > 0:
         client.send_message("/chatbox/typing", True)
         time.sleep(lazy)
-    client.send_message("/chatbox/input", [message, True])
+    client.send_message("/chatbox/input", [message, True, True])
 
 
 if __name__ == "__main__":
