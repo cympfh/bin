@@ -2,7 +2,7 @@
 
 # Alternative `hwclock` for WSL2 on Windows
 
-TIMESTAMP="/mnt/c/Users/$USER/.timestamp"
+TIMESTAMP="/mnt/c/Users/Public/.timestamp"
 touch $TIMESTAMP
 windate=$(date --rfc-3339=ns -r "$TIMESTAMP")
 sudo date --rfc-3339=ns -s "$windate"
