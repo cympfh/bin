@@ -1,0 +1,10 @@
+#!/bin/bash
+
+LAST=
+while :; do
+  LINE=$(clip)
+  if [ "$LAST" != "$LINE" ]; then
+    echo "$LINE"
+    LAST="$LINE"
+  fi
+done
