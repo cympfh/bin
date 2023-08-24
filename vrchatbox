@@ -12,7 +12,7 @@ port = 9000
 
 
 @click.command()
-@click.option("--lazy", type=int, default=1)
+@click.option("--lazy", type=int, default=-1)
 @click.argument("messages", type=str, nargs=-1)
 def main(lazy: int, messages: list[str]):
     message = " ".join(messages)
