@@ -1,0 +1,33 @@
+#!/bin/bash
+
+usage() {
+  cat <<EOM
+run - Run any script/source code.
+
+SYNOPSIS
+  $ run <script/source code file>
+EOM
+}
+
+case "$1" in
+  help | --help | -h )
+    usage
+    ;;
+  *.py )
+    python $1
+    ;;
+  *.rb )
+    ruby $1
+    ;;
+  *.js )
+    node $1
+    ;;
+  *.rs )
+    rustc $1 -o /tmp/a.out
+    /tmp/a.out
+    ;;
+  * )
+    echo "Failed. See --help" >&2
+    exit 1
+    ;;
+esac
