@@ -1,12 +1,20 @@
 #!/usr/bin/env python
 
+import sys
 import json
 import openai
 import os
 import click
 import requests
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+langs = {
+    "unknown": "不明 (与えられる文から推測してください)",
+    "ja": "日本語",
+    "en": "English",
+    "zh": "Chinese",
+    "ko": "Korean",
+}
 
 
 class DeepL:
@@ -18,178 +26,110 @@ class DeepL:
             "Authorization": f"DeepL-Auth-Key {key}",
         }
 
-    def run(self, text: str, target_lang: str = "EN") -> dict:
+    def run(
+        self,
+        text: str,
+        source_lang: str = "unknown",
+        target_lang: str = "ja",
+    ) -> str:
         data = {
             "text": text,
-            "target_lang": target_lang,
+            "target_lang": target_lang.upper(),
         }
+        if source_lang != "unknown":
+            data |= {"source_lang": source_lang.upper()}
         response = requests.post(self.uri, headers=self.headers, data=data)
-        return response.json()
+        return json.dumps(response.json()["translations"][0], ensure_ascii=False)
 
 
 class ChatGPT:
-    def __init__(self, system_prompt: str = ""):
-        self.messages = []
-        if system_prompt:
-            self.messages = [
-                {
-                    "role": "system",
-                    "content": system_prompt,
-                }
-            ]
+    def __init__(self):
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    def add_sample(self, user_input: str, assistant_output: str):
-        self.messages.append(
+    def run(
+        self, text: str, source_lang: str = "unknown", target_lang: str = "ja"
+    ) -> str | None:
+        source_lang_description = langs[source_lang]
+        target_lang_description = langs[target_lang]
+        system_prompt = f"""
+自然言語の翻訳をしてください.
+
+翻訳元になる言語: {source_lang_description} ({source_lang.upper()})
+翻訳先になる言語: {target_lang_description} ({target_lang.upper()})
+
+ユーザーから文章が与えられます.
+文章は
+---
+から
+---
+の間にあります.
+
+あなたが返すべき出力は一つの JSON 辞書です.
+つまり {{ で始まって }} で終わる文字列のみです.
+これ以外のテキストを一切含めないことを厳守してください.
+特に JSON の前後に余計なテキストを出力しないでください.
+これは厳守してください.
+
+あなたが返すJSONのフォーマットは次です
+
+{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "text": "{{翻訳結果}}" }}
+
+ではこれから翻訳したい文章を次に与えます.
+あなたはその言語の先生になったつもりで, より良い翻訳結果を一つ JSON 形式で示してください.
+"""
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
             {
                 "role": "user",
-                "content": user_input,
-            }
+                "content": f"""
+---
+{text}
+---
+""",
+            },
+        ]
+        result = self.client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=messages,
         )
-        self.messages.append(
-            {
-                "role": "assistant",
-                "content": assistant_output,
-            }
-        )
-
-    def chat(self, user_input: str, model: str) -> str:
-        self.messages.append({"role": "user", "content": user_input})
-        result: dict = openai.ChatCompletion.create(  # type: ignore
-            model=model,
-            messages=self.messages,
-        )
-        content = result.get("choices", [])[0].get("message", {}).get("content")
-        self.messages.append(
-            {
-                "role": "assistant",
-                "content": content,
-            }
-        )
-        return content
-
-
-translator = ChatGPT(
-    """
-    ## 翻訳タスク
-    Translate the given text and describe it.
-    Input is given with a function `trans()`.
-    Output is {"source": ${source language}, "target": ${target language}, "description": ${どういう意味かの説明}, "text": ${translated text}}
-"""
-)
-translator.add_sample(
-    "trans(こんにちわ)",
-    json.dumps(
-        {
-            "source": "jp",
-            "target": "en",
-            "text": "Hello",
-            "description": "昼の挨拶です",
-        }
-    ),
-)
-translator.add_sample(
-    "trans(Hello; target=ja)",
-    json.dumps(
-        {
-            "source": "en",
-            "target": "jp",
-            "text": "こんにちわ",
-            "description": "昼の挨拶です",
-        }
-    ),
-)
-translator.add_sample(
-    "trans(n is the number of integers we want to sum, which in this case is 100; "
-    "source=en, target=jp, context=数式の説明)",
-    json.dumps(
-        {
-            "source": "en",
-            "target": "jp",
-            "text": "n は合計したい整数の個数でここでは 100 です",
-            "description": "数式の説明",
-        }
-    ),
-)
-translator.add_sample(
-    "trans(まだ読んでない本が10冊積まれています; target=en)",
-    json.dumps(
-        {
-            "source": "jp",
-            "target": "en",
-            "text": "There are 10 books that I haven't read yet stacked up.",
-            "description": "",
-        }
-    ),
-)
-translator.add_sample(
-    "trans(晩安; context=夜の挨拶, source=cn, target=en)",
-    json.dumps(
-        {
-            "source": "cn",
-            "target": "en",
-            "text": "Good night",
-            "description": "Evening greeting",
-        }
-    ),
-)
-translator.add_sample(
-    "trans(Oi!; source=portuguesa, target=ja)",
-    json.dumps(
-        {
-            "source": "portuguesa",
-            "target": "ja",
-            "text": "やあ！",
-            "description": "注：ポルトガル語の Oi! は、日本語の おい! に当たります。",
-        }
-    ),
-)
+        return result.choices[0].message.content
 
 
 @click.command()
 @click.option(
     "--model",
-    "-M",
-    type=click.Choice(["gpt-3.5-turbo", "gpt-4", "deepl"]),
+    "-m",
+    type=click.Choice(["gpt", "deepl"]),
     default="deepl",
     show_default=True,
 )
-@click.option("--context", "-c", type=str, default=None, help="hint context")
-@click.option("--source", "-s", type=str, default=None, help="source language")
-@click.option("--target", "-t", type=str, default=None, help="target language")
-@click.argument("text", type=str)
+@click.option("--source", "-s", type=str, default="unknown", help="source language")
+@click.option("--target", "-t", type=str, default="ja", help="target language")
+@click.argument("text", type=str, required=False)
 def main(
     model: str,
-    context: str | None,
-    source: str | None,
-    target: str | None,
+    source: str,
+    target: str,
     text: str,
 ):
+    if not text:
+        text = sys.stdin.read()
 
-    if model == "deepl":
-        result = DeepL().run(text, target_lang=target or "EN")
-        print(result)
-        return
+    assert source in langs, f"Supported langs: {langs}"
+    assert target in langs, f"Supported langs: {langs}"
 
-    options = []
-    if context:
-        options.append(f"context={context}")
-    if source:
-        options.append(f"source={source}")
-    if target:
-        options.append(f"target={target}")
-    if options:
-        prompt = f"trans({text}; {', '.join(options)})"
-    else:
-        prompt = f"trans({text})"
+    match model:
+        case "deepl":
+            result = DeepL().run(text, source_lang=source, target_lang=target)
+        case "gpt":
+            result = ChatGPT().run(text, source_lang=source, target_lang=target)
+        case _:
+            raise NotImplemented(model)
 
-    click.secho(f"[INFO] {model}, {prompt}", fg="green", err=True)
-    output = translator.chat(prompt, model)
-    try:
-        _ = json.loads(output)
-        print(output)
-    except Exception:
-        click.secho("[WARN] Data cannot be parse as JSON", err=True, fg="red")
-        click.echo(output, err=True)
+    print(result)
 
 
 if __name__ == "__main__":
