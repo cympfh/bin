@@ -1,0 +1,14 @@
+#!/bin/bash
+
+CPU_PERCENT=$(
+  powershell.exe -Command "(Get-Counter '\Processor(_Total)\% Processor Time').CounterSamples.CookedValue" |
+    tr -d '\r\a' |
+    awk '{print int($1 * 100) / 100}'
+)
+MEMORY_PERCENT=$(
+  powershell.exe -Command "(Get-Counter '\Memory\% Committed Bytes In Use').CounterSamples.CookedValue" |
+    tr -d '\r\a' |
+    awk '{print int($1 * 100) / 100}'
+)
+
+echo "{\"cpu_percent\": $CPU_PERCENT, \"memory_percent\": $MEMORY_PERCENT}"
