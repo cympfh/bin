@@ -39,7 +39,10 @@ class DeepL:
         if source_lang != "unknown":
             data |= {"source_lang": source_lang.upper()}
         response = requests.post(self.uri, headers=self.headers, data=data)
-        return json.dumps(response.json()["translations"][0], ensure_ascii=False)
+        data = response.json()["translations"][0]
+        data["target_language"] = target_lang.upper()
+        data["model"] = "deepl"
+        return json.dumps(data, ensure_ascii=False)
 
 
 class ChatGPT:
@@ -67,12 +70,16 @@ class ChatGPT:
 あなたが返すべき出力は一つの JSON 辞書です.
 つまり {{ で始まって }} で終わる文字列のみです.
 これ以外のテキストを一切含めないことを厳守してください.
-特に JSON の前後に余計なテキストを出力しないでください.
-これは厳守してください.
+JSON の前後に余計なテキストを出力しないでください.
+例えば ```json や ``` といった行は不要です.
+このことは厳守してください.
 
 あなたが返すJSONのフォーマットは次です
 
-{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "text": "{{翻訳結果}}" }}
+{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "gpt", "text": "{{翻訳結果}}" }}
+
+"target_language" の値は {target_lang.upper()} になるはずです
+"model" の値は "gpt" で固定しておいてください
 
 ではこれから翻訳したい文章を次に与えます.
 あなたはその言語の先生になったつもりで, より良い翻訳結果を一つ JSON 形式で示してください.
