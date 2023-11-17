@@ -23,8 +23,7 @@ case "$1" in
     node $1
     ;;
   *.rs )
-    rustc $1 -o /tmp/a.out
-    /tmp/a.out
+    rustc $1 -o /tmp/a.out && /tmp/a.out
     ;;
   * )
     echo "Failed. See --help" >&2
