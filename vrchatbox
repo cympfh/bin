@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import os
+import requests
 import time
 import click
 from pythonosc import udp_client
@@ -11,15 +13,71 @@ ip = res.stdout.decode()
 port = 9000
 
 
+class DeepL:
+    def __init__(self):
+        key = os.getenv("DEEPL_AUTH_KEY")
+        assert key is not None
+        self.uri = "https://api.deepl.com/v2/translate"
+        self.headers = {
+            "Authorization": f"DeepL-Auth-Key {key}",
+        }
+
+    def run(
+        self,
+        text: str,
+        source_lang: str = "unknown",
+        target_lang: str = "ja",
+    ) -> dict:
+        data = {
+            "text": text,
+            "target_lang": target_lang.upper(),
+        }
+        if source_lang != "unknown":
+            data |= {"source_lang": source_lang.upper()}
+        response = requests.post(self.uri, headers=self.headers, data=data)
+        data = response.json()["translations"][0]
+        return data
+
+
 @click.command()
 @click.option("--lazy", type=int, default=-1)
+@click.option("--source", "-s", type=str, default="ja")
+@click.option("--translate", "-t", type=str, default="en,zh")
+@click.option("--verbose", is_flag=True, default=False)
 @click.argument("messages", type=str, nargs=-1)
-def main(lazy: int, messages: list[str]):
+def main(lazy: int, source: str, translate: str, verbose: bool, messages: list[str]):
+    """
+    Parameters
+    ----------
+    lazy
+        typing... を何秒間表示させるか
+    source
+        (翻訳を使う場合) 元の言語を何とするか
+    translate
+        空文字列出ない場合, これで指定した言語に翻訳する
+        翻訳先の言語が複数ある場合はカンマ区切りで
+    verbose
+        冗長モード
+    messages
+        テキスト
+    """
     message = " ".join(messages)
+    if verbose:
+        click.secho(f"UDP to {ip}:{port}", err=True, fg="yellow")
     client = udp_client.SimpleUDPClient(ip, port)
     if lazy > 0:
+        if verbose:
+            click.secho(f"Sleep {lazy}", err=True, fg="yellow")
         client.send_message("/chatbox/typing", True)
         time.sleep(lazy)
+    if translate:
+        message_translated = []
+        for target_lang in translate.strip().split(","):
+            result = DeepL().run(message, source_lang=source, target_lang=target_lang)
+            click.secho(f"{target_lang}: {result}", err=True, fg="red")
+            message_translated.append(result["text"])
+        message = f"{' / '.join(message_translated)} / {message}"
+    click.secho(f"send: {message}", err=True, fg="blue")
     client.send_message("/chatbox/input", [message, True, True])
 
 
