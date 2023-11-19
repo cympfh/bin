@@ -43,9 +43,17 @@ class DeepL:
 @click.option("--lazy", type=int, default=-1)
 @click.option("--source", "-s", type=str, default="ja")
 @click.option("--translate", "-t", type=str, default="en,zh")
-@click.option("--verbose", is_flag=True, default=False)
+@click.option("--ignore-self", "-I", is_flag=True, default=False)
+@click.option("--verbose", "-v", is_flag=True, default=False)
 @click.argument("messages", type=str, nargs=-1)
-def main(lazy: int, source: str, translate: str, verbose: bool, messages: list[str]):
+def main(
+    lazy: int,
+    source: str,
+    translate: str,
+    ignore_self: bool,
+    verbose: bool,
+    messages: list[str],
+):
     """
     Parameters
     ----------
@@ -56,6 +64,9 @@ def main(lazy: int, source: str, translate: str, verbose: bool, messages: list[s
     translate
         空文字列出ない場合, これで指定した言語に翻訳する
         翻訳先の言語が複数ある場合はカンマ区切りで
+    ignore_self
+        translate が指定されている場合に有効
+        翻訳元のメッセージを含めない
     verbose
         冗長モード
     messages
@@ -74,10 +85,15 @@ def main(lazy: int, source: str, translate: str, verbose: bool, messages: list[s
         message_translated = []
         for target_lang in translate.strip().split(","):
             result = DeepL().run(message, source_lang=source, target_lang=target_lang)
-            click.secho(f"{target_lang}: {result}", err=True, fg="red")
+            if verbose:
+                click.secho(f"{target_lang}: {result}", err=True, fg="red")
             message_translated.append(result["text"])
-        message = f"{' / '.join(message_translated)} / {message}"
-    click.secho(f"send: {message}", err=True, fg="blue")
+        if ignore_self:
+            message = " / ".join(message_translated)
+        else:
+            message = f"{' / '.join(message_translated)} / {message}"
+    if verbose:
+        click.secho(f"send: {message}", err=True, fg="blue")
     client.send_message("/chatbox/input", [message, True, True])
 
 
