@@ -1,3 +1,13 @@
 #!/bin/bash
 
-ipconfig.exe | nkf | grep IPv4 | grep ' 192' | grep -o '192[0-9\.]*' | tr -d ' \n\r'
+NAMES="イーサネット Ethernet イーサネット2"
+
+for name in $NAMES; do
+  out=$(
+    powershell.exe -c "if (Get-NetAdapter -Name $name -ErrorAction SilentlyContinue) { Get-NetIPAddress -InterfaceAlias $name -AddressFamily IPv4 | Select-Object -ExpandProperty IPAddress}"
+  )
+  if [ ! -z "$out" ] ;then
+    echo $out | tr -d '\r\n'
+    break
+  fi
+done
