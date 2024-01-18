@@ -1,100 +1,200 @@
 #!/usr/bin/env python
 
 import os
-import requests
+import openai
 import time
+import openai
 import click
 from pythonosc import udp_client
 import subprocess
 
 
-res = subprocess.run("ipwin", capture_output=True)
-ip = res.stdout.decode()
-port = 9000
+class OSC:
+    def __init__(self, verbose: bool):
+        self.verbose = verbose
+        res = subprocess.run("ipwin", capture_output=True)
+        ip = res.stdout.decode()
+        port = 9000
+
+        if self.verbose:
+            click.secho(f"[OSC] UDP to {ip}:{port}", err=True, fg="yellow")
+        self.client = udp_client.SimpleUDPClient(ip, port)
+
+    def set_typing(self, indicator: bool):
+        """タイピング状態をセットする
+
+        Parameters
+        ----------
+        indicator
+            状態をオンにするかオフにするか
+        """
+        if self.verbose:
+            click.secho(f"[OSC] set_typing {indicator}")
+        self.client.send_message("/chatbox/typing", indicator)
+
+    def send(self, message: str, notify: bool):
+        """送信
+
+        Parameters
+        ----------
+        message
+            テキスト
+        notify
+            通知音を鳴らすかどうか
+        """
+        if self.verbose:
+            click.secho(f"[OSC] send message={message}, notify={notify}")
+        self.client.send_message("/chatbox/input", [message, True, notify])
 
 
-class DeepL:
+class Translate:
     def __init__(self):
-        key = os.getenv("DEEPL_AUTH_KEY")
-        assert key is not None
-        self.uri = "https://api.deepl.com/v2/translate"
-        self.headers = {
-            "Authorization": f"DeepL-Auth-Key {key}",
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.langs = {
+            "ja": "日本語",
+            "en": "English",
+            "zh": "Chinese",
+            "ko": "Korean",
         }
 
     def run(
         self,
         text: str,
-        source_lang: str = "unknown",
-        target_lang: str = "ja",
-    ) -> dict:
-        data = {
-            "text": text,
-            "target_lang": target_lang.upper(),
-        }
-        if source_lang != "unknown":
-            data |= {"source_lang": source_lang.upper()}
-        response = requests.post(self.uri, headers=self.headers, data=data)
-        data = response.json()["translations"][0]
-        return data
+        targets: list[str],
+    ) -> str | None:
+        target_lang_description = [self.langs[t] for t in targets]
+        system_prompt = f"""
+自然言語の翻訳をしてください.
+
+翻訳元になる言語: 不明 (与えられる文から推測せよ)
+翻訳先になる言語: {' / '.join(target_lang_description)}
+
+ユーザーから文章が与えられます.
+文章は
+---
+から
+---
+の間にあります.
+
+あなたはこれを翻訳してください.
+言語が複数ある場合はそれぞれの翻訳を順に行って, それらの結果を / で区切って並べてください.
+
+例えば翻訳先: English / Chinese の場合, 入力に対するあなたの出力は次のとおりです
+
+---
+こんばんわ
+---
+Good evening / 晩上好
+---
+
+他の例も示します
+
+---
+おやすみなさい
+---
+Good night! / 晩安
+---
+
+翻訳先は一つかもしれません. English の場合,
+
+---
+こんばんわ
+---
+Good evening
+---
+
+---
+おやすみなさい
+---
+Good night!
+---
+
+求められた言語にのみ適切に翻訳してください
+
+マーカーとして --- を利用しているだけで, --- 自体は出力に含まれないことに注意してください.
+もし含んでしまうとあなたはマイナスに評価されるので絶対に厳守してください.
+
+ではこれから翻訳したい文章を次に与えます.
+"""
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": f"""
+---
+{text}
+---
+""",
+            },
+        ]
+        result = self.client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=messages,
+        )
+        content = result.choices[0].message.content
+        if not content:
+            return None
+
+        def strip(s: str) -> str:
+            s = s.strip()
+            lines = s.split("\n")
+            lines = [line for line in lines if line != "---"]
+            return "\n".join(lines)
+
+        content = strip(content)
+        return content
 
 
 @click.command()
-@click.option("--lazy", type=int, default=-1)
-@click.option("--source", "-s", type=str, default="ja")
-@click.option("--translate", "-t", type=str, default="en,zh")
-@click.option("--ignore-self", "-I", is_flag=True, default=False)
-@click.option("--verbose", "-v", is_flag=True, default=False)
+@click.option(
+    "--lazy", "-L", type=int, default=0, help="入力中状態を何秒作るか. デフォルトでは 0 秒 (作らない)"
+)
+@click.option(
+    "--translate",
+    "-t",
+    type=str,
+    default="",
+    help="翻訳する場合, その翻訳先言語をカンマ区切りで複数並べる. デフォルトでは翻訳しない",
+)
+@click.option(
+    "--ignore-self", "-I", is_flag=True, default=False, help="翻訳するとき元の言語も載せるか"
+)
+@click.option("--quiet", "-q", is_flag=True, default=False, help="通知音を消すモード")
+@click.option("--verbose", "-v", is_flag=True, default=False, help="冗長モード")
 @click.argument("messages", type=str, nargs=-1)
 def main(
     lazy: int,
-    source: str,
     translate: str,
     ignore_self: bool,
+    quiet: bool,
     verbose: bool,
     messages: list[str],
 ):
-    """
-    Parameters
-    ----------
-    lazy
-        typing... を何秒間表示させるか
-    source
-        (翻訳を使う場合) 元の言語を何とするか
-    translate
-        空文字列出ない場合, これで指定した言語に翻訳する
-        翻訳先の言語が複数ある場合はカンマ区切りで
-    ignore_self
-        translate が指定されている場合に有効
-        翻訳元のメッセージを含めない
-    verbose
-        冗長モード
-    messages
-        テキスト
-    """
+    osc = OSC(verbose)
     message = " ".join(messages)
-    if verbose:
-        click.secho(f"UDP to {ip}:{port}", err=True, fg="yellow")
-    client = udp_client.SimpleUDPClient(ip, port)
     if lazy > 0:
         if verbose:
             click.secho(f"Sleep {lazy}", err=True, fg="yellow")
-        client.send_message("/chatbox/typing", True)
+        osc.set_typing(True)
         time.sleep(lazy)
+
+    # 翻訳するモード
     if translate:
-        message_translated = []
-        for target_lang in translate.strip().split(","):
-            result = DeepL().run(message, source_lang=source, target_lang=target_lang)
-            if verbose:
-                click.secho(f"{target_lang}: {result}", err=True, fg="red")
-            message_translated.append(result["text"])
+        tr = Translate()
+        targets = translate.strip().split(",")
+        result = tr.run(message, targets)
         if ignore_self:
-            message = " / ".join(message_translated)
+            message = result
         else:
-            message = f"{' / '.join(message_translated)} / {message}"
-    if verbose:
-        click.secho(f"send: {message}", err=True, fg="blue")
-    client.send_message("/chatbox/input", [message, True, True])
+            message = f"{result} / {message}"
+
+    assert message, "message is empty or None"
+    osc.send(message, not quiet)
+    if lazy > 0:
+        osc.set_typing(False)
 
 
 if __name__ == "__main__":
