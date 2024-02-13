@@ -110,7 +110,7 @@ JSON の前後に余計なテキストを出力しないでください.
     "--model",
     "-m",
     type=click.Choice(["gpt", "deepl"]),
-    default="deepl",
+    default="gpt",
     show_default=True,
 )
 @click.option("--source", "-s", type=str, default="unknown", help="source language")
