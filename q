@@ -13,12 +13,17 @@ SYNOPSIS
   Pop and Execute from queue
     $ q
 
+  Pop and Execute n jobs
+    $ q -n 5
+
   List and Execute
     $ q -l
 EOM
 }
 
 TASK=
+N=1
+INTERVAL=5
 
 if [ $# -eq 0 ]; then
   TASK=POP
@@ -32,6 +37,11 @@ else
       shift
       TASK=PUSH
       ;;
+    -n )
+      N=$2
+      shift 2
+      TASK=POP
+      ;;
     -l )
       TASK=LIST
       ;;
@@ -42,17 +52,24 @@ else
 fi
 
 pop-and-exec() {
-  if [ -s "$QFILE" ]; then
-    CMD=$(head -1 "$QFILE")
-    log-info "Executing: $CMD"
-    cat "$QFILE" | awk c++ > /tmp/tmpq
-    mv /tmp/tmpq $QFILE
-    $CMD
-    log-info "Finished: $CMD with $?"
-  else
-    log-info "Error: pop-and-exec failed. $QFILE is empty."
-    exit 1
-  fi
+  for i in $(seq $N); do
+    if [ -s "$QFILE" ]; then
+      CMD=$(head -1 "$QFILE")
+      log-info "Executing: $CMD"
+      cat "$QFILE" | awk c++ > /tmp/tmpq
+      mv /tmp/tmpq $QFILE
+      $CMD
+      STATUS=$?
+      log-info "Finished: $CMD with $STATUS"
+      if [ ! $STATUS -eq 0 ]; then
+        log-info "Abort"
+        exit $STATUS
+      fi
+    else
+      log-info "Error: pop-and-exec failed. $QFILE is empty."
+      exit 1
+    fi
+  done
 }
 
 list-and-exec() {
