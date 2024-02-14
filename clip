@@ -1,7 +1,13 @@
 #!/bin/bash
 
 TMP_WSL=~/Downloads/clip.txt
-TMP_WIN="C:/Users/${USER}/Downloads/clip.txt"
+if [ -d /mnt/c/Users/cympfh ]; then
+    TMP_WIN='C:/Users/cympfh/Downloads/clip.txt'
+elif [ -d /mnt/c/Users/cympf ]; then
+    TMP_WIN='C:/Users/cympf/Downloads/clip.txt'
+else
+    exit 2
+fi
 
 usage() {
     wrap=cat
@@ -53,10 +59,10 @@ done
 
 # detect clipboard command
 COMMANDSET=
-if ( command -v xsel >/dev/null ); then
-    COMMANDSET=xsel
-elif ( command -v clip.exe >/dev/null ); then
+if ( command -v clip.exe >/dev/null ); then
     COMMANDSET=clip.exe
+elif ( command -v xsel >/dev/null ); then
+    COMMANDSET=xsel
 else
     err "Not found any commands for Clipboard in this System."
 fi
