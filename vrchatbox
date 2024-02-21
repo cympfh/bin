@@ -11,8 +11,19 @@ from pythonosc import udp_client
 
 
 class OSC:
-    def __init__(self, verbose: bool):
-        self.verbose = verbose
+    def __init__(self, verbose: bool, dry_run: bool):
+        """初期化
+
+        Parameters
+        ----------
+        verbose
+            冗長モード
+        dry_run
+            dry-run, 実際には実行しないモード
+            verbose モードを自動でオンにする
+        """
+        self.verbose = verbose or dry_run
+        self.dry_run = dry_run
         res = subprocess.run("ipwin", capture_output=True)
         ip = res.stdout.decode()
         port = 9000
@@ -31,7 +42,8 @@ class OSC:
         """
         if self.verbose:
             click.secho(f"[OSC] set_typing {indicator}")
-        self.client.send_message("/chatbox/typing", indicator)
+        if not self.dry_run:
+            self.client.send_message("/chatbox/typing", indicator)
 
     def send(self, message: str, notify: bool):
         """送信
@@ -45,7 +57,8 @@ class OSC:
         """
         if self.verbose:
             click.secho(f"[OSC] send message={message}, notify={notify}")
-        self.client.send_message("/chatbox/input", [message, True, notify])
+        if not self.dry_run:
+            self.client.send_message("/chatbox/input", [message, True, notify])
 
 
 class Translate:
@@ -165,6 +178,7 @@ Good night!
 )
 @click.option("--quiet", "-q", is_flag=True, default=False, help="通知音を消すモード")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="冗長モード")
+@click.option("--dry-run", "-N", is_flag=True, default=False, help="dry-run")
 @click.argument("messages", type=str, nargs=-1)
 def main(
     lazy: int,
@@ -172,6 +186,7 @@ def main(
     ignore_self: bool,
     quiet: bool,
     verbose: bool,
+    dry_run: bool,
     messages: list[str],
 ):
 
@@ -181,7 +196,7 @@ def main(
     else:
         text = " ".join(messages)
 
-    osc = OSC(verbose)
+    osc = OSC(verbose, dry_run)
     if lazy > 0:
         if verbose:
             click.secho(f"Sleep {lazy}", err=True, fg="yellow")
