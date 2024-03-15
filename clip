@@ -5,7 +5,10 @@ if [ -d /mnt/c/Users/cympfh ]; then
     TMP_WIN='C:/Users/cympfh/Downloads/clip.txt'
 elif [ -d /mnt/c/Users/cympf ]; then
     TMP_WIN='C:/Users/cympf/Downloads/clip.txt'
+elif [ -d /mnt/c/Users/kazuhiro_hattori ]; then
+    TMP_WIN='C:/Users/kazuhiro_hattori/Downloads/clip.txt'
 else
+    echo "??!??!?!?!" >&2
     exit 2
 fi
 
