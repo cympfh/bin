@@ -1,0 +1,97 @@
+#!/usr/bin/env python
+
+import openai
+import os
+import click
+
+
+class TUI:
+    @staticmethod
+    def get_input(prompt: str) -> str | None:
+        header = f"% {prompt}"
+        buffer: str = click.edit(f"{header}\n\n")  # type: ignore
+        if not buffer:
+            return None
+        lines = buffer.split("\n")
+        if lines[0] == header:
+            lines = lines[1:]
+        return " ".join(line for line in lines if line).strip()
+
+    @staticmethod
+    def hr():
+        click.secho("---", fg="yellow")
+
+    @staticmethod
+    def write(label: str, text: str, labelcolor: str, hr: bool = True):
+        click.secho(f"[{label}] ", nl=False, fg=labelcolor)
+        click.echo(text)
+        if hr:
+            TUI.hr()
+
+
+class ChatGPT:
+    def __init__(self, title: str, abst: str):
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+        self.messages = [
+            {"role": "system", "content": "ユーザーと一緒に論文を読み進めていってあなたはその内容を要約する"},
+            {
+                "role": "user",
+                "content": f"""
+今から "{title}" というタイトルの論文を読みます
+論文の概要を以下に示すので,まず論文の全体像を把握してそれを教えてください
+箇条書きで簡潔に要約してください
+
+---
+{abst}
+---
+""",
+            },
+        ]
+        result = self.client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=self.messages,
+        )
+        self.abst = result.choices[0].message.content
+        self.messages.append({"role": "assistant", "content": self.abst})
+        self.messages.append(
+            {"role": "user", "content": "では次に論文の断片をコピペするので内容を箇条書きで要約して教えてください"}
+        )
+
+    def summarize(self, text: str) -> str:
+        self.messages.append({"role": "user", "content": text})
+        result = self.client.chat.completions.create(
+            model="gpt-4-1106-preview",
+            messages=self.messages,
+        )
+        self.messages.pop()
+        return result.choices[0].message.content
+
+
+@click.command()
+def main():
+    title = TUI.get_input("Title")
+    if not title:
+        return
+    TUI.write("TITLE", title, "green", hr=True)
+
+    abst = TUI.get_input("Abstract")
+    if not abst:
+        return
+
+    gpt = ChatGPT(title, abst)
+    if gpt.abst:
+        TUI.write("ABST", gpt.abst, "blue", hr=True)
+
+    while click.confirm("next?", default=True):
+        text = TUI.get_input("Text")
+        if not text:
+            break
+        TUI.write("TEXT", text, "green", hr=False)
+
+        summary = gpt.summarize(text)
+        TUI.write("SUMMARY", summary, "blue", hr=True)
+
+
+if __name__ == "__main__":
+    main()
