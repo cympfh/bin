@@ -1,0 +1,15 @@
+#!/bin/bash
+
+TMP=/tmp/esh
+echo "EDITOR=$EDITOR" >&2
+echo "SHELL=$SHELL" >&2
+echo "TMP=$TMP" >&2
+
+if [ ! -t 0 ]; then
+  cat >$TMP
+else
+  : >$TMP
+fi
+
+$EDITOR $TMP
+$SHELL $TMP
