@@ -30,17 +30,23 @@ class TUI:
 
 
 class ChatGPT:
+    SYSTEM_PROMPT = """
+ユーザーと一緒に論文を読み進めていき あなたは内容を的確に要約したものを出力する
+要約は簡潔に箇条書きに日本語で.
+ただし登場する術語 (technical term) は無理に和訳せず そのまま英語のまま使ってよい
+"""
+
     def __init__(self, title: str, abst: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         self.messages = [
-            {"role": "system", "content": "ユーザーと一緒に論文を読み進めていってあなたはその内容を要約する"},
+            {"role": "system", "content": self.SYSTEM_PROMPT},
             {
                 "role": "user",
                 "content": f"""
-今から "{title}" というタイトルの論文を読みます
-論文の概要を以下に示すので,まず論文の全体像を把握してそれを教えてください
-箇条書きで簡潔に要約してください
+今から "{title}" というタイトルの論文を読む
+論文の概要を以下に示す
+まず論文の全体像を把握して要約してください
 
 ---
 {abst}
@@ -50,19 +56,41 @@ class ChatGPT:
         ]
         result = self.client.chat.completions.create(
             model="gpt-4-1106-preview",
-            messages=self.messages,
+            messages=self.messages,  # type: ignore
         )
         self.abst = result.choices[0].message.content
-        self.messages.append({"role": "assistant", "content": self.abst})
-        self.messages.append(
-            {"role": "user", "content": "では次に論文の断片をコピペするので内容を箇条書きで要約して教えてください"}
-        )
+        self.messages = [
+            {"role": "system", "content": self.SYSTEM_PROMPT},
+            {
+                "role": "user",
+                "content": f"""
+今から "{title}" というタイトルの論文を読みます
+この論文の概要を次に示すので参考にしてください
 
-    def summarize(self, text: str) -> str:
-        self.messages.append({"role": "user", "content": text})
+---
+{self.abst}
+---
+
+次に私は論文の断片をコピペするので あなたはその内容を簡潔に要約して出力してください
+""",
+            },
+        ]
+
+    def summarize(self, text: str) -> str | None:
+        self.messages.append(
+            {
+                "role": "user",
+                "content": f"""
+論文の断片:
+---
+{text}
+---
+""",
+            }
+        )
         result = self.client.chat.completions.create(
             model="gpt-4-1106-preview",
-            messages=self.messages,
+            messages=self.messages,  # type: ignore
         )
         self.messages.pop()
         return result.choices[0].message.content
@@ -83,13 +111,15 @@ def main():
     if gpt.abst:
         TUI.write("ABST", gpt.abst, "blue", hr=True)
 
-    while click.confirm("next?", default=True):
+    while click.confirm("next?", default=None):
         text = TUI.get_input("Text")
         if not text:
             break
         TUI.write("TEXT", text, "green", hr=False)
 
         summary = gpt.summarize(text)
+        if not summary:
+            summary = "{Error: ChatGPT response is empty}"
         TUI.write("SUMMARY", summary, "blue", hr=True)
 
 
