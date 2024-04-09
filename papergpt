@@ -55,7 +55,7 @@ class ChatGPT:
             },
         ]
         result = self.client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4-0125-preview",
             messages=self.messages,  # type: ignore
         )
         self.abst = result.choices[0].message.content
