@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+import sys
+import openai
+import os
+import click
+
+
+class ChatGPT:
+    MODEL_NAME = "gpt-4-turbo"
+
+    def __init__(self):
+        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+    def run(self, text: str) -> str | None:
+        system_prompt = f"""
+入力された中国語を正しい普通の簡体字を用いたテキストに修正してください
+
+入力される文は次の点で誤ってる可能性があります
+
+- 簡体字ではない. 日本語の漢字かもしれません. 簡体字に修正してください
+- ピンインを含むかもしれない. 簡体字に修正してください
+- 空白文字を含むかもしれない. 特にピンインの場合は tokenize されてるかもしれません. 出力からは消して下さい
+
+あなたが返すべき出力は一つの JSON 辞書です.
+つまり {{ で始まって }} で終わる文字列のみです.
+これ以外のテキストを一切含めないことを厳守してください.
+JSON の前後に余計なテキストを出力しないでください.
+例えば ```json や ``` といった行は不要です.
+このことは厳守してください.
+
+あなたが返すJSONのフォーマットは次です
+
+{{ "completed": "{{修正されたテキスト}}" }}
+"""
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt,
+            },
+            {
+                "role": "user",
+                "content": f"""
+---
+{text}
+---
+""",
+            },
+        ]
+        result = self.client.chat.completions.create(
+            model=self.MODEL_NAME, messages=messages
+        )
+        return result.choices[0].message.content
+
+
+@click.command()
+@click.argument("text", type=str, required=False)
+def main(
+    text: str,
+):
+    if not text:
+        text = sys.stdin.read()
+    result = ChatGPT().run(text)
+    print(result)
+
+
+if __name__ == "__main__":
+    main()
