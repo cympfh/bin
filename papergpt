@@ -1,8 +1,12 @@
 #!/usr/bin/env python
 
-import openai
 import os
+import re
+
 import click
+import easy_scraper
+import openai
+import requests
 
 
 class TUI:
@@ -96,17 +100,40 @@ class ChatGPT:
         return result.choices[0].message.content
 
 
+class Arxiv:
+    def __init__(self, code_or_url: str):
+        if p := re.search(r"[0-9]+\.[0-9]+", code_or_url):
+            self.code = p[0]
+        else:
+            raise Exception("arxiv code invalid")
+
+    def info(self) -> tuple[str, str]:
+        """(title, description)"""
+        url = f"https://arxiv.org/abs/{self.code}"
+        html = requests.get(url).text
+        title = easy_scraper.match(
+            html, '<meta property="og:title" content="{title}" />'
+        )[0]["title"]
+        description = easy_scraper.match(
+            html, '<meta property="og:description" content="{description}" />'
+        )[0]["description"]
+        return title, description
+
+
 @click.command()
-def main():
-    title = TUI.get_input("Title")
-    if not title:
-        return
-    TUI.write("TITLE", title, "green", hr=True)
+@click.option("--arxiv", type=str, default="")
+def main(arxiv: str):
+    if arxiv:
+        title, abst = Arxiv(arxiv).info()
+    else:
+        title = TUI.get_input("Title")
+        if not title:
+            return
+        abst = TUI.get_input("Abstract")
+        if not abst:
+            return
 
-    abst = TUI.get_input("Abstract")
-    if not abst:
-        return
-
+    TUI.write("TITLE", title, "green", hr=False)
     gpt = ChatGPT(title, abst)
     if gpt.abst:
         TUI.write("ABST", gpt.abst, "blue", hr=True)
