@@ -145,7 +145,7 @@ Good night!
             },
         ]
         result = self.client.chat.completions.create(
-            model="gpt-4-1106-preview",
+            model="gpt-4o",
             messages=messages,  # type: ignore
         )
         content = result.choices[0].message.content

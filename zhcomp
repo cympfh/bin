@@ -7,7 +7,7 @@ import click
 
 
 class ChatGPT:
-    MODEL_NAME = "gpt-4-turbo"
+    MODEL_NAME = "gpt-4o"
 
     def __init__(self):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
