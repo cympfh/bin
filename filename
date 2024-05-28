@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+import os.path
+import json
+
+import click
+
+
+class Filename:
+    @staticmethod
+    def basename(filename: str) -> str:
+        return os.path.basename(filename)
+
+    @staticmethod
+    def root(filename: str) -> str:
+        return os.path.splitext(filename)[0]
+
+    @staticmethod
+    def extension(filename: str) -> str:
+        return os.path.splitext(filename)[1][1:]
+
+    @staticmethod
+    def tail_root(filename: str) -> str:
+        return os.path.splitext(Filename.basename(filename))[0]
+
+
+@click.command()
+@click.option("--basename", "-B", is_flag=True)
+@click.option("--root", "-R", is_flag=True)
+@click.option("--extension", "-E", is_flag=True)
+@click.option("--tail-root", "-T", is_flag=True)
+@click.argument("filename", type=str, required=True)
+def main(basename: bool, root: bool, extension: bool, tail_root: bool, filename: str):
+    if basename:
+        print(Filename.basename(filename))
+    elif root:
+        print(Filename.root(filename))
+    elif extension:
+        print(Filename.extension(filename))
+    elif tail_root:
+        print(Filename.tail_root(filename))
+    else:
+        print(
+            json.dumps(
+                {
+                    "basename": Filename.basename(filename),
+                    "root": Filename.root(filename),
+                    "extension": Filename.extension(filename),
+                    "tail": {"root": Filename.tail_root(filename)},
+                }
+            )
+        )
+
+
+if __name__ == "__main__":
+    main()
