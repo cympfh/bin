@@ -23,8 +23,11 @@ class ChatGPT:
 - 部分的にピンインを含むかもしれない. 簡体字に修正してください
 - 空白文字を含むかもしれない. 特にピンインの場合は tokenize されてるかもしれません. 出力からは消して下さい
 
-句読点および !? は半角文字を用いてください.
-文が2つ以上有る場合は半角スペース文字で区切ってください.
+句読点や約物については通常の英文のルールを適用してください.
+- 句読点には半角の ,. を使う
+- ただし読点, の後ろには半角スペース文字が一つ入る
+- 文末の！？には半角の !? を使う
+- 句点 . の後ろに次の文が続くなら半角スペース一つを入れる
 
 あなたが返すべき出力は一つの JSON 辞書です.
 つまり {{ で始まって }} で終わる文字列のみです.
@@ -52,7 +55,8 @@ JSON の前後に余計なテキストを出力しないでください.
             },
         ]
         result = self.client.chat.completions.create(
-            model=self.MODEL_NAME, messages=messages
+            model=self.MODEL_NAME,
+            messages=messages,
         )
         return result.choices[0].message.content
 
