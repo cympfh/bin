@@ -1,7 +1,18 @@
 #!/bin/bash
 
-if [ ! -n "${BROWSER}" ]; then
-  BROWSER=/mnt/c/Users/cympf/AppData/Local/Vivaldi/Application/vivaldi.exe
+# 候補
+browsers() {
+  echo /mnt/c/Users/cympf/AppData/Local/Vivaldi/Application/vivaldi.exe
+  echo /mnt/c/Users/kazuhiro_hattori/AppData/Local/Vivaldi/Application/vivaldi.exe
+}
+
+if [ -z "${BROWSER}" ]; then
+  for b in $(browsers); do
+    if [ -e $b ]; then
+      export BROWSER=$b
+      break
+    fi
+  done
 fi
 
 ${BROWSER} $@
