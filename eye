@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from typing import Self
+from PIL import Image
+from io import BytesIO
 from glob import glob
 from dataclasses import dataclass, field
 
@@ -11,13 +13,37 @@ import eyed3
 import eyed3.id3
 import requests
 
-VERSION = "0.0.1"
+VERSION = "0.1.0"
 
-Usage = f"""
+Usage = """
 eye - metadata for mp3 playlist
 
 Usage: Write up metadata.toml and run `python3 eye -f ./metadata.toml`
 `metadata.toml` is for `class Metadata`.
+"""
+
+Sample = """\b
+metadata.toml (sample)
+-----------
+[default]
+glob = "*.mp3"  # target files (default=*.mp3)
+album = "ALBUM NAME"
+artist = "ARTIST NAME"
+album_artist = "MAKER NAME"
+cover = "./COVER.JPEG"  # To fetch from dlsite, "dlsite:COVER.JPEG"
+dlsite = "RJ***"  # can fetch some metadata from dlsite
+
+\b
+[files]
+titles = [
+    "01.aaa",
+    "02.bbb",
+]
+artists = []        # To override default.artist
+albums = []         # To override default.album
+album_artists = []  # To override default.album_artist
+covers = []         # To override default.cover
+```
 """
 
 
@@ -42,7 +68,7 @@ class Default:
     album: str | None
     artist: str | None
     album_artist: str | None
-    cover: str | None
+    cover: str | None  # "dlsite:COVER.JPG" とすると dlsite から COVER.JPG として画像を保存する
     dlsite: str | None
 
 
@@ -122,15 +148,41 @@ class Metadata:
     def cover(self, idx: int) -> str | None:
         if self.files.covers:
             return self.files.covers[idx]
+        if (
+            self.default.dlsite
+            and self.default.cover
+            and self.default.cover.startswith("dlsite")
+        ):
+            # fetch og:image
+            url = self.dlsite("ogimage")
+            # download -> make it a square
+            response = requests.get(url)
+            img = Image.open(BytesIO(response.content))
+            img = img.convert("RGB")
+            size = max(img.size)
+            background = Image.new("RGB", (size, size), (0, 0, 0))
+            offset = ((size - img.width) // 2, (size - img.height) // 2)
+            background.paste(img, offset)
+            # save as filename
+            filename = self.default.cover.removeprefix("dlsite:")
+            background.save(filename)
+            return filename
         if self.default.cover:
             return self.default.cover
+
         return None
+
+    @property
+    def filelist(self) -> list[str]:
+        """files by glob"""
+        return sorted(glob(str(self.default.glob)))
 
     @property
     def total_num(self) -> int:
         if self.files.titles:
             return len(self.files.titles)
-        raise AssertionError("Cannot identify num of files")
+        else:
+            return len(self.filelist)
 
     def dlsite(self, attr: str):
         id = self.default.dlsite
@@ -168,6 +220,7 @@ class DLSite:
     title: str
     artist: str | None
     maker: str
+    ogimage: str | None
 
     def __init__(self, id: str):
         self.url = f"https://www.dlsite.com/maniax/work/=/product_id/{id}.html"
@@ -182,6 +235,17 @@ class DLSite:
         self.maker = easy_scraper.match(
             self.html, "<tr><th>サークル名</th><td><a>{}</a></td></tr>"
         )[0][""]
+        self.ogimage = self.fetch_ogimage()
+
+    def fetch_ogimage(self) -> str | None:
+        try:
+            imgs = easy_scraper.match(
+                self.html, '<meta property="og:image" content="{}" />'
+            )
+            imgurl = imgs[0][""]
+            return imgurl
+        except Exception:
+            return None
 
 
 def update(filepath: str, eye: Eye, dry_run: bool):
@@ -228,13 +292,13 @@ def update(filepath: str, eye: Eye, dry_run: bool):
     )
 
 
-@click.command(help=Usage)
+@click.command(help=Usage, epilog=Sample)
 @click.option("--dry-run", "-n", is_flag=True, default=False, show_default=True)
 @click.option("--file", "-f", default="metadata.toml", show_default=True)
 def main(dry_run: bool, file: str):
     data = toml.load(open(file, "rt"))
     metadata = Metadata.from_dict(data)
-    files = sorted(glob(str(metadata.default.glob)))
+    files = metadata.filelist
     if not files:
         raise AssertionError(f"Not found any files for {metadata.default.glob}")
     eyes = metadata.eyes
