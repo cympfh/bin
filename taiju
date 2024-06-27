@@ -17,7 +17,6 @@ EOM
 }
 
 record() {
-    bash ~/.dots/i3/i3-memo.sh add TAIJU "$1.kg"
     echo "{\"datetime\": \"$(date "+%Y-%m-%d %H:%M")\", \"weight\": $1}" >/tmp/data
     curl -H "X-KEY: ${IK_KEY}" -XPOST "${URL}" --data @/tmp/data
 }
@@ -32,7 +31,8 @@ plot() {
         tac |
         cat > $DAT
 
-    DT_FROM=$(date --date '2 year ago' "+%Y-%m-%d")
+    DT_FROM=$(date --date '2 years ago' "+%Y-%m-%d")
+    DT_FROM="2024-05-15"
 
     gnuplot <<EOM
     set terminal pngcairo size 1200,600
