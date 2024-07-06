@@ -1,32 +1,24 @@
 #!/bin/bash
 
-TMP_WSL=~/Downloads/clip.txt
-if [ -d /mnt/c/Users/cympfh ]; then
-    TMP_WIN='C:/Users/cympfh/Downloads/clip.txt'
-elif [ -d /mnt/c/Users/cympf ]; then
-    TMP_WIN='C:/Users/cympf/Downloads/clip.txt'
-elif [ -d /mnt/c/Users/kazuhiro_hattori ]; then
-    TMP_WIN='C:/Users/kazuhiro_hattori/Downloads/clip.txt'
-else
-    echo "??!??!?!?!" >&2
-    exit 2
-fi
-
 usage() {
     wrap=cat
     if ( command -v bat >/dev/null ); then
         wrap="bat -l bash --style=plain"
     fi
     cat <<EOM | bash -c "$wrap"
-clip - Clipboard Utility for Linux, WSL
+clip - Clipboard Utility for Linux, WSL and MacOS
 
 Copy:
-  cat {file} | clip
-  clip -i {file}
+  from stdin:
+    cat {file} | clip
+  from a file:
+    clip -i {file}
 
 Paste:
-  clip
-  clip -o {file}
+  to stdout:
+    clip
+  to a file:
+    clip -o {file}
 EOM
 }
 
@@ -35,10 +27,34 @@ err() {
     exit 1
 }
 
-SOURCE=
-TARGET=
+# detect clipboard command
+COMMANDSET=
+if ( command -v clip.exe >/dev/null ); then
+    COMMANDSET=wsl
+elif ( command -v xsel >/dev/null ); then
+    COMMANDSET=xsel
+elif ( command -v pbcopy >/dev/null ) && ( command -v pbcopy >/dev/null ); then
+    COMMANDSET=mac
+else
+    err "Not found commandset for Clipboard in your System."
+fi
+
+if [ "$COMMANDSET" = "wsl" ]; then
+    TMP_WSL=~/Downloads/clip.txt
+    if [ -d /mnt/c/Users/cympfh ]; then
+        TMP_WIN='C:/Users/cympfh/Downloads/clip.txt'
+    elif [ -d /mnt/c/Users/cympf ]; then
+        TMP_WIN='C:/Users/cympf/Downloads/clip.txt'
+    elif [ -d /mnt/c/Users/kazuhiro_hattori ]; then
+        TMP_WIN='C:/Users/kazuhiro_hattori/Downloads/clip.txt'
+    else
+        err "Cannot locate a clip file on your Windows System"
+    fi
+fi
 
 # argparse
+SOURCE=
+TARGET=
 while [ $# -gt 0 ]; do
     case "$1" in
         -h | --help )
@@ -60,16 +76,6 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-# detect clipboard command
-COMMANDSET=
-if ( command -v clip.exe >/dev/null ); then
-    COMMANDSET=clip.exe
-elif ( command -v xsel >/dev/null ); then
-    COMMANDSET=xsel
-else
-    err "Not found any commands for Clipboard in this System."
-fi
-
 copy_text() {
     case "$COMMANDSET" in
         "clip.exe" )
@@ -79,8 +85,11 @@ copy_text() {
         "xsel" )
             xsel -bi
             ;;
+        "mac" )
+            pbcopy
+            ;;
         * )
-            exit 1
+            err "Unsupported commandset ($COMMANDSET)"
             ;;
     esac
 }
@@ -94,8 +103,11 @@ paste_text() {
         "xsel" )
             xsel -bo
             ;;
+        "mac" )
+            pbpaste
+            ;;
         * )
-            exit 1
+            err "Unsupported commandset ($COMMANDSET)"
             ;;
     esac
 }
