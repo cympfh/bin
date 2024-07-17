@@ -1,12 +1,16 @@
 #!/bin/bash
 
 TMP=/tmp/esh
-echo "EDITOR=$EDITOR" >&2
-echo "SHELL=$SHELL" >&2
-echo "TMP=$TMP" >&2
+
+if [ -z "$EDITOR" ] || [ -z "$SHELL" ]; then
+  echo "esh error: EDITOR or SHELL is not set."
+  exit 2
+fi
 
 if [ ! -t 0 ]; then
   cat >$TMP
+elif [ $# -gt 0 ]; then
+  echo "$@" >$TMP
 else
   : >$TMP
 fi

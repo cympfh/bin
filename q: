@@ -1,0 +1,7 @@
+#!/bin/bash
+
+_history() {
+  tail -n 100 .zsh_history | sed 's/^: [0-9]*:[0-9]*;//' | sed '/^$/d' | uniq | tac
+}
+
+_history | peco | esh
