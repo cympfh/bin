@@ -78,7 +78,7 @@ done
 
 copy_text() {
     case "$COMMANDSET" in
-        "clip.exe" )
+        "wsl" )
             cat | nkf -s >$TMP_WSL
             powershell.exe /c "Get-Content $TMP_WIN | Set-Clipboard"
             ;;
@@ -96,7 +96,7 @@ copy_text() {
 
 paste_text() {
     case "$COMMANDSET" in
-        "clip.exe" )
+        "wsl" )
             powershell.exe /c "Get-Clipboard -Format Text > $TMP_WIN"
             cat $TMP_WSL | nkf | tr -d '\r'
             ;;
