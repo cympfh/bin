@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+
+import tomllib
+import json
+import sys
+
+import click
+
+
+@click.command()
+@click.argument("f", type=click.Path(exists=True), required=False)
+def main(f):
+    if f is None:
+        buf = sys.stdin.read()
+        obj = tomllib.loads(buf)
+        print(json.dumps(obj))
+    else:
+        obj = tomllib.load(open(f, "rb"))
+        print(json.dumps(obj))
+
+
+if __name__ == "__main__":
+    main()
