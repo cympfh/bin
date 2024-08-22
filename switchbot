@@ -12,6 +12,9 @@ SYNOPSIS
         show status
 
     $ switchbot send <DEVICE_ID> '<JSON>'
+
+    $ switchbot scene
+    $ switchbot scene exec <SCENE_ID>
 EOM
 }
 
@@ -43,6 +46,14 @@ switchbot-send() {
     post /v1.0/devices/$1/commands "$2"
 }
 
+switchbot-scene-list() {
+    get "/v1.0/scenes"
+}
+
+switchbot-scene-exec() {
+    post "/v1.0/scenes/$1/execute" "{}"
+}
+
 if [ $# -eq 0 ]; then
     usage
     exit
@@ -61,6 +72,16 @@ case "$1" in
         ;;
     send )
         switchbot-send "$2" "$3"
+        ;;
+    scene | scenes )
+        case "$2" in
+            exec )
+                switchbot-scene-exec "$3"
+                ;;
+            * )
+                switchbot-scene-list
+                ;;
+        esac
         ;;
     * )
         echo Unknown subcommand $1
