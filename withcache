@@ -1,0 +1,49 @@
+#!/bin/bash
+
+mkdir -p /tmp/withcache
+CACHEDIR=/tmp/withcache
+
+usage() {
+  cat <<EOM
+NAME - withcache
+
+SYNOPSIS
+  withcache [OPTION] [COMMAND...]
+
+  withcache curl http://hoge.com/
+    Run naiive and cache the result (only stdout)
+  withcache curl http://hoge.com/
+    Return its cache
+
+OPTION
+  --ttl, -t <caching time seconds>
+    default ttl is 3600 (=1hr).
+EOM
+}
+
+TTL=3600
+
+# argparse
+case "$1" in
+  -h | --help )
+    usage
+    exit
+    ;;
+  --ttl | -t )
+    TTL=$2
+    shift 2
+    ;;
+  * )
+    ;;
+esac
+
+HASHKEY="$(echo "$@" | base64)"
+HASHFILE="$CACHEDIR/$HASHKEY"
+
+# if cache hit
+if [ -f "$HASHFILE" ] && [[ $(date -r "$HASHFILE" +%s) -ge $(( $(date +%s) - $TTL )) ]]; then
+  cat "$HASHFILE"
+else
+  $@ | tee "$HASHFILE"
+fi
+
