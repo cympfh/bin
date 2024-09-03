@@ -18,6 +18,9 @@ SYNOPSIS
 OPTION
   --ttl, -t <caching time seconds>
     default ttl is 3600 (=1hr).
+    NOTE:
+      -t 0: zero ttl (clear cache immediately)
+      -t -1: infinity ttl (use cache always)
 EOM
 }
 
@@ -40,10 +43,24 @@ esac
 HASHKEY="$(echo "$@" | base64)"
 HASHFILE="$CACHEDIR/$HASHKEY"
 
-# if cache hit
-if [ -f "$HASHFILE" ] && [[ $(date -r "$HASHFILE" +%s) -ge $(( $(date +%s) - $TTL )) ]]; then
+# cache hit check
+HIT=
+if [ -f "$HASHFILE" ]; then
+  if [ "$TTL" -eq 0 ]; then
+    HIT=0
+  elif [ "$TTL" = "-1" ]; then
+    HIT=1
+  elif [[ $(date -r "$HASHFILE" +%s) -ge $(( $(date +%s) - $TTL )) ]]; then
+    HIT=1
+  else
+    HIT=0
+  fi
+else
+  HIT=0
+fi
+
+if [ "$HIT" -eq 1 ]; then
   cat "$HASHFILE"
 else
   $@ | tee "$HASHFILE"
 fi
-
