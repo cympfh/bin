@@ -1,66 +1,81 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-mkdir -p /tmp/withcache
-CACHEDIR=/tmp/withcache
+import base64
+import os
+import pathlib
+import subprocess
+import sys
+import time
 
-usage() {
-  cat <<EOM
-NAME - withcache
+import click
 
-SYNOPSIS
-  withcache [OPTION] [COMMAND...]
 
-  withcache curl http://hoge.com/
-    Run naiive and cache the result (only stdout)
-  withcache curl http://hoge.com/
-    Return its cache
+class WithCache:
+    cachedir: str = "/tmp/withcache"
+    ttl: int
+    debug: bool
 
-OPTION
-  --ttl, -t <caching time seconds>
-    default ttl is 3600 (=1hr).
-    NOTE:
-      -t 0: zero ttl (clear cache immediately)
-      -t -1: infinity ttl (use cache always)
-EOM
-}
+    def __init__(self, ttl: int, debug: bool):
+        self.ttl = ttl
+        self.debug = debug
+        os.makedirs(self.cachedir, exist_ok=True)
 
-TTL=3600
+    def trace(self, msg: str, fg="red"):
+        if self.debug:
+            click.secho(msg, err=True, fg=fg)
 
-# argparse
-case "$1" in
-  -h | --help )
-    usage
-    exit
-    ;;
-  --ttl | -t )
-    TTL=$2
-    shift 2
-    ;;
-  * )
-    ;;
-esac
+    def run(self, args: list[str]):
+        if not args:
+            click.echo("No args", err=True)
+            sys.exit(1)
 
-HASHKEY="$(echo "$@" | base64)"
-HASHFILE="$CACHEDIR/$HASHKEY"
+        hashkey = self._hashkey(args)
+        hashfile = self._hashfile(hashkey)
 
-# cache hit check
-HIT=
-if [ -f "$HASHFILE" ]; then
-  if [ "$TTL" -eq 0 ]; then
-    HIT=0
-  elif [ "$TTL" = "-1" ]; then
-    HIT=1
-  elif [[ $(date -r "$HASHFILE" +%s) -ge $(( $(date +%s) - $TTL )) ]]; then
-    HIT=1
-  else
-    HIT=0
-  fi
-else
-  HIT=0
-fi
+        if self.hit(hashfile):
+            print(hashfile.read_text())
+        else:
+            result = subprocess.run(
+                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+            )
+            self.trace(f"command = {args}", fg="green")
+            self.trace(f"result = {result}", fg="yellow")
+            if result.stderr:
+                sys.stderr.write(result.stderr.decode("utf-8"))
+            with open(hashfile, "w") as f:
+                f.write(result.stdout.decode("utf-8"))
+            print(result.stdout.decode("utf-8"))
 
-if [ "$HIT" -eq 1 ]; then
-  cat "$HASHFILE"
-else
-  $@ | tee "$HASHFILE"
-fi
+    def _hashkey(self, args: list[str]) -> str:
+        key = " ".join(args)
+        return base64.b64encode(key.encode("utf-8")).decode("utf-8").replace("/", "_")
+
+    def _hashfile(self, hashkey: str) -> pathlib.Path:
+        return pathlib.Path(self.cachedir) / hashkey
+
+    def hit(self, hashfile: pathlib.Path) -> bool:
+        if self.ttl == 0:
+            self.trace("Cache not hit: ttl is zero.")
+            return False
+        if os.path.exists(hashfile):
+            if self.ttl < 0:
+                self.trace("Cache hit: ttl is negative.")
+                return True
+            file_mtime = os.path.getmtime(hashfile)
+            if time.time() - file_mtime <= self.ttl:
+                self.trace("Cache hit: cache file is fresh.")
+                return True
+        self.trace("Cache not hit.")
+        return False
+
+
+@click.command()
+@click.option("--ttl", "-t", default=3600, help="Caching time in seconds")
+@click.option("--debug", is_flag=True, default=False, help="You dont need this")
+@click.argument("args", nargs=-1, type=str)
+def main(ttl: int, debug: bool, args: tuple[str, ...]):
+    WithCache(ttl, debug).run(list(args))
+
+
+if __name__ == "__main__":
+    main()  # pyright: ignore
