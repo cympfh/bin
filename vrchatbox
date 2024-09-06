@@ -24,8 +24,8 @@ class OSC:
         """
         self.verbose = verbose or dry_run
         self.dry_run = dry_run
-        res = subprocess.run("ipwin", capture_output=True)
-        ip = res.stdout.decode()
+        res = subprocess.run("withcache ipwin", shell=True, capture_output=True)
+        ip = res.stdout.decode().strip()
         port = 9000
 
         if self.verbose:

@@ -1,11 +1,5 @@
 #!/bin/bash
 
-# 一時間キャッシュを使う
-if [ -f /tmp/ipwin.result ] && [[ $(date +%s -r /tmp/ipwin.result) -ge $(( $(date +%s) - 3600 )) ]]; then
-  cat /tmp/ipwin.result
-  exit 0
-fi
-
 NAMES="イーサネット Ethernet イーサネット2"
 
 for name in $NAMES; do
@@ -13,7 +7,7 @@ for name in $NAMES; do
     powershell.exe -c "if (Get-NetAdapter -Name $name -ErrorAction SilentlyContinue) { Get-NetIPAddress -InterfaceAlias $name -AddressFamily IPv4 | Select-Object -ExpandProperty IPAddress}"
   )
   if [ ! -z "$out" ] ;then
-    echo $out | tr -d '\r\n' | tee /tmp/ipwin.result
+    echo $out | tr -d '\r\n'
     break
   fi
 done
