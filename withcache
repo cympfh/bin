@@ -10,6 +10,19 @@ import time
 import click
 
 
+def to_seconds(time_str: str) -> int:
+    if time_str.endswith("d"):
+        return int(time_str[:-1]) * 3600 * 24
+    elif time_str.endswith("h"):
+        return int(time_str[:-1]) * 3600
+    elif time_str.endswith("m"):
+        return int(time_str[:-1]) * 60
+    elif time_str.endswith("s"):
+        return int(time_str[:-1])
+    else:
+        return int(time_str)
+
+
 class WithCache:
     cachedir: str = "/tmp/withcache"
     ttl: int
@@ -70,11 +83,16 @@ class WithCache:
 
 
 @click.command()
-@click.option("--ttl", "-t", default=3600, help="Caching time in seconds")
+@click.option(
+    "--ttl",
+    "-t",
+    default="1h",
+    help="Caching time. Number in seconds or use prefix h,m,s",
+)
 @click.option("--debug", is_flag=True, default=False, help="You dont need this")
 @click.argument("args", nargs=-1, type=str)
-def main(ttl: int, debug: bool, args: tuple[str, ...]):
-    WithCache(ttl, debug).run(list(args))
+def main(ttl: str, debug: bool, args: tuple[str, ...]):
+    WithCache(to_seconds(ttl), debug).run(list(args))
 
 
 if __name__ == "__main__":
