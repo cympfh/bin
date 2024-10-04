@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import base64
+import hashlib
 import os
 import pathlib
 import subprocess
@@ -55,13 +55,17 @@ class WithCache:
             self.trace(f"result = {result}", fg="yellow")
             if result.stderr:
                 sys.stderr.write(result.stderr.decode("utf-8"))
-            with open(hashfile, "w") as f:
-                f.write(result.stdout.decode("utf-8"))
+            if result.returncode == 0:
+                with open(hashfile, "w") as f:
+                    f.write(result.stdout.decode("utf-8"))
+                self.trace("Cached successfully")
+            else:
+                self.trace(f"Exited with {result.returncode}, not cached")
             print(result.stdout.decode("utf-8"))
 
     def _hashkey(self, args: list[str]) -> str:
         key = " ".join(args)
-        return base64.b64encode(key.encode("utf-8")).decode("utf-8").replace("/", "_")
+        return hashlib.md5(key.encode("utf-8")).hexdigest()
 
     def _hashfile(self, hashkey: str) -> pathlib.Path:
         return pathlib.Path(self.cachedir) / hashkey
