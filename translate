@@ -17,39 +17,10 @@ langs = {
 }
 
 
-class DeepL:
-    def __init__(self):
-        key = os.getenv("DEEPL_AUTH_KEY")
-        assert key is not None
-        self.uri = "https://api.deepl.com/v2/translate"
-        self.headers = {
-            "Authorization": f"DeepL-Auth-Key {key}",
-        }
-
-    def run(
-        self,
-        text: str,
-        source_lang: str = "unknown",
-        target_lang: str = "ja",
-    ) -> str:
-        data = {
-            "text": text,
-            "target_lang": target_lang.upper(),
-        }
-        if source_lang != "unknown":
-            data |= {"source_lang": source_lang.upper()}
-        response = requests.post(self.uri, headers=self.headers, data=data)
-        data = response.json()["translations"][0]
-        data["target_language"] = target_lang.upper()
-        data["model"] = "deepl"
-        return json.dumps(data, ensure_ascii=False)
-
-
 class ChatGPT:
-    MODEL_NAME = "gpt-4o"
-
-    def __init__(self):
+    def __init__(self, model_name: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model_name = model_name
 
     def run(
         self, text: str, source_lang: str = "unknown", target_lang: str = "ja"
@@ -78,7 +49,7 @@ JSON の前後に余計なテキストを出力しないでください.
 
 あなたが返すJSONのフォーマットは次です
 
-{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "gpt", "text": "{{翻訳結果}}" }}
+{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "gpt", "text": "{{翻訳結果}}", "pinyin": "{{中国語の場合のみ, 普通話での標準的な拼音}}" }}
 
 "target_language" の値は {target_lang.upper()} になるはずです
 "model" の値は "gpt" で固定しておいてください
@@ -101,7 +72,7 @@ JSON の前後に余計なテキストを出力しないでください.
             },
         ]
         result = self.client.chat.completions.create(
-            model=self.MODEL_NAME, messages=messages
+            model=self.model_name, messages=messages
         )
         return result.choices[0].message.content
 
@@ -110,8 +81,8 @@ JSON の前後に余計なテキストを出力しないでください.
 @click.option(
     "--model",
     "-m",
-    type=click.Choice(["gpt", "deepl"]),
-    default="gpt",
+    type=click.Choice(["gpt-4o", "gpt-4o-mini"]),
+    default="gpt-4o",
     show_default=True,
 )
 @click.option("--source", "-s", type=str, default="unknown", help="source language")
@@ -129,14 +100,7 @@ def main(
     assert source in langs, f"Supported langs: {langs}"
     assert target in langs, f"Supported langs: {langs}"
 
-    match model:
-        case "deepl":
-            result = DeepL().run(text, source_lang=source, target_lang=target)
-        case "gpt":
-            result = ChatGPT().run(text, source_lang=source, target_lang=target)
-        case _:
-            raise NotImplemented(model)
-
+    result = ChatGPT(model).run(text, source_lang=source, target_lang=target)
     print(result)
 
 
