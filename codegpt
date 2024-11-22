@@ -1,16 +1,24 @@
 #!/usr/bin/env python
 
-import sys
-import openai
 import os
+import sys
+
 import click
+import openai
+from pydantic import BaseModel
+
+
+class CodeOutput(BaseModel):
+    language: str
+    explanation: str
+    code: str
 
 
 class ChatGPT:
     def __init__(self):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-    def chat(self, language: str, text: str) -> str | None:
+    def chat(self, language: str, text: str) -> CodeOutput:
         """自然言語で書いてほしいコードを説明する
 
         生成したコードを得る
@@ -46,68 +54,51 @@ class ChatGPT:
 """,
             },
         ]
-        result = self.client.chat.completions.create(
+        result = self.client.beta.chat.completions.parse(
             model="gpt-4o",
-            messages=messages,
+            messages=messages,  # type: ignore
+            response_format=CodeOutput,
         )
-        return result.choices[0].message.content
+        return result.choices[0].message.parsed  # type: ignore
 
-    def complete(
-        self, language: str, code: str, placeholder: str = "@CMP", debug: bool = False
-    ) -> str | None:
+    def complete(self, language: str, code: str) -> CodeOutput:
         """与えたプログラムコード片のうちプレースホルダーを補完してもらう
 
-        {{{ から }}} に囲まれた部分は ChatGPT には渡さない.
-
+        {{ ... }} が補完対象
         生成したコードを得る
 
         Parameters
         ----------
         language
             プログラミング言語
-        placeholder
-            プレースホルダーとして使うマーカー
-            このマーカーの後ろに丸括弧付きで補足文を書ける
         code
             プレースホルダーを含むプログラムコード片
         """
-        import re
-
-        pattern = r"\{\{\{.*?\}\}\}"
-        code = re.sub(pattern, "", code, flags=re.DOTALL)
-
         system_prompt = f"""
-プログラミングの手伝いをしてください.
+プログラミングの手伝いをしてください
 
-今から {language} 言語で書いたコードを示します.
-途中に `{placeholder}` が出現しますが, これはプレースホルダーを表しています.
-あなたがすべきことはこのプレースホルダーを全て適切に埋めたコードを出力することです.
-このプレースホルダー以外の部分は何も変更せずにそのまま出力するように努めてください.
+今からプログラミング言語 ({language}) で書いたコードを示します
+途中に {{{{ ... }}}} が出現します. これがプレースホルダーを表しています
 
-プレースホルダーの補足:
-
-{placeholder}
-
-はプレースホルダーを表します
-
-{placeholder}(ここに補足文)
-
-は補足文付きのプレースホルダーです.
-あなたはこの文章をヒントにしてコードを埋めてください.
 例えば
 
 fn main() {{
-    {placeholder}(Hello, World! をする)
+    {{{{ Hello, World! をする }}}}
 }}
 
 といった具合です.
 
-無定義で現れる関数やマクロはあなたが見えない場所が定義されている.
-あなたがそれらを使うことも許可されている.
-とにかく {placeholder} を補完することに集中しろ.
+あなたがすべきことはこのプレースホルダーの中を埋めることです
+プレースホルダーの中には何を書きたいかを自然言語で書かれることがあります
+その場合にはそれに従ってください
+プレースホルダーの中は空の場合もあります
+その場合には周囲のコードから類推してください
 
-ユーザーは一秒でも早く結果を知りたいので, {language} コードを示す前に御託を述べるような真似は決してするな.
-そのようなことをする場合, あなたの結果はマイナスに評価されます.
+全てを適切に埋めたコードを出力してください
+
+無定義で現れる関数やマクロはあなたが見えない場所が定義されている
+あなたがそれらを使うことも許可されている
+とにかく プレースホルダー {{{{ }}}} を補完することに集中せよ
 """
         messages = [
             {
@@ -123,13 +114,12 @@ fn main() {{
 """,
             },
         ]
-        if debug:
-            click.secho(messages, err=True, fg="green")
-        result = self.client.chat.completions.create(
+        result = self.client.beta.chat.completions.parse(
             model="gpt-4o",
-            messages=messages,
+            messages=messages,  # type: ignore
+            response_format=CodeOutput,
         )
-        return result.choices[0].message.content
+        return result.choices[0].message.parsed  # type: ignore
 
 
 @click.group()
@@ -139,34 +129,44 @@ def main():
 
 @main.command()
 @click.option("--language", "-L", type=str, default="Rust")
+@click.option("--quiet", "-q", is_flag=True, default=False)
 @click.argument("text", type=str, required=False)
 def chat(
     language: str,
+    quiet: bool,
     text: str,
 ):
     if not text:
         text = sys.stdin.read()
-    click.secho("Running...", err=True, fg="yellow")
+    if not quiet:
+        click.secho("Running...", err=True, fg="yellow")
     result = ChatGPT().chat(language, text)
-    print(result)
+    if not quiet:
+        click.secho(f"Language: {result.language}", err=True)
+        click.secho(f"Explanation: {result.explanation}", err=True)
+    print(result.code)
 
 
 @main.command()
-@click.option("--language", "-L", type=str, default="Rust")
-@click.option("--debug", is_flag=True, default=False)
+@click.option("--language", "-L", type=str, default="?")
+@click.option("--quiet", "-q", is_flag=True, default=False)
 @click.argument("src", type=str, required=False)
 def complete(
     language: str,
-    debug: bool,
+    quiet: bool,
     src: str,
 ):
     if src:
         code = open(src, "rt").read()
     else:
         code = sys.stdin.read()
-    click.secho("Running...", err=True, fg="yellow")
-    result = ChatGPT().complete(language, code, debug)
-    print(result)
+    if not quiet:
+        click.secho("Running...", err=True, fg="yellow")
+    result = ChatGPT().complete(language, code)
+    if not quiet:
+        click.secho(f"Language: {result.language}", err=True)
+        click.secho(f"Explanation: {result.explanation}", err=True)
+    print(result.code)
 
 
 if __name__ == "__main__":
