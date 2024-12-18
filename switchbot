@@ -1,90 +1,89 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-# See: https://github.com/OpenWonderLabs/SwitchBotAPI
+import base64
+import json
+import hashlib
+import hmac
+import os
+import time
+import uuid
 
-usage() {
-    cat <<EOM
-SYNOPSIS
-    $ switchbot devices
-        list up devices
+import requests
+import click
 
-    $ switchbot status <DEVICE_ID>
-        show status
 
-    $ switchbot send <DEVICE_ID> '<JSON>'
+class Switchbot:
+    def _auth(self):
+        token = os.environ.get("SWITCHBOT_API_TOKEN")
+        assert token
+        secret = os.environ.get("SWITCHBOT_API_SECRET")
+        assert secret
+        nonce = uuid.uuid4()
+        t = int(round(time.time() * 1000))
+        string_to_sign = bytes(f"{token}{t}{nonce}", "utf-8")
+        key = bytes(secret, "utf-8")
+        sign = base64.b64encode(
+            hmac.new(key, msg=string_to_sign, digestmod=hashlib.sha256).digest()
+        )
+        self.headers = {
+            "Authorization": token,
+            "Content-Type": "application/json",
+            "charset": "utf8",
+            "t": str(t),
+            "sign": str(sign, "utf-8"),
+            "nonce": str(nonce),
+            "Content-Type": "application/json; charset: utf8",
+        }
 
-    $ switchbot scene
-    $ switchbot scene exec <SCENE_ID>
-EOM
-}
+    def __init__(self):
+        self._auth()
 
-# get /v1.0/<API_URI>
-get() {
-    curl -sL \
-        -H "Authorization: $SWITCHBOT_API_TOKEN" \
-        -H "Content-Type: application/json; charset: utf8" \
-        "https://api.switch-bot.com$1"
-}
-post() {
-    curl -sL \
-        -H "Authorization: $SWITCHBOT_API_TOKEN" \
-        -H "Content-Type: application/json; charset: utf8" \
-        -XPOST \
-        "https://api.switch-bot.com$1" \
-        --data "$2"
-}
+    def get(self, uri: str):
+        url = f"https://api.switch-bot.com{uri}"
+        return requests.get(url, headers=self.headers).json()
 
-switchbot-devices() {
-    get "/v1.0/devices"
-}
+    def post(self, uri: str, data):
+        url = f"https://api.switch-bot.com{uri}"
+        return requests.post(url, data=data, headers=self.headers).json()
 
-switchbot-status() {
-    get "/v1.0/devices/$1/status"
-}
 
-switchbot-send() {
-    post /v1.0/devices/$1/commands "$2"
-}
+@click.group()
+def main():
+    pass
 
-switchbot-scene-list() {
-    get "/v1.0/scenes"
-}
 
-switchbot-scene-exec() {
-    post "/v1.0/scenes/$1/execute" "{}"
-}
+@main.command()
+def devices():
+    res = Switchbot().get("/v1.1/devices")
+    print(json.dumps(res["body"]["deviceList"]))
 
-if [ $# -eq 0 ]; then
-    usage
-    exit
-fi
 
-case "$1" in
-    help | --help )
-        usage
-        exit
-        ;;
-    devices | device )
-        switchbot-devices
-        ;;
-    status )
-        switchbot-status "$2"
-        ;;
-    send )
-        switchbot-send "$2" "$3"
-        ;;
-    scene | scenes )
-        case "$2" in
-            exec )
-                switchbot-scene-exec "$3"
-                ;;
-            * )
-                switchbot-scene-list
-                ;;
-        esac
-        ;;
-    * )
-        echo Unknown subcommand $1
-        exit 1
-        ;;
-esac
+@main.command()
+@click.argument("device_id", type=str)
+def status(device_id: str):
+    res = Switchbot().get(f"/v1.1/devices/{device_id}/status")
+    print(json.dumps(res))
+
+
+@main.command()
+@click.argument("device_id", type=str)
+def send(device_id: str):
+    res = Switchbot().post(f"/v1.1/devices/{device_id}/commands", {})
+    print(json.dumps(res))
+
+
+@main.command()
+def scenes():
+    res = Switchbot().get("/v1.1/scenes")
+    print(json.dumps(res))
+
+
+@main.command()
+@click.argument("scene_id", type=str)
+def scene(scene_id: str):
+    res = Switchbot().post(f"/v1.1/scenes/{scene_id}/execute", {})
+    print(json.dumps(res))
+
+
+if __name__ == "__main__":
+    main()
