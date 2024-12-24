@@ -64,7 +64,6 @@ def main(model: str, image: str):
         image_url = image
     else:
         image_url = tobase64(image)
-    click.secho(image_url)
     result = get_image_description(model, image_url)
     print(
         json.dumps(
