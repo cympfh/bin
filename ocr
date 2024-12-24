@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+
+import base64
+import json
+import mimetypes
+import os
+
+import click
+import openai
+from pydantic import BaseModel
+
+
+class Output(BaseModel):
+    ocr_text: str
+    description_minor: str
+    description_major: str
+
+
+def tobase64(path: str) -> str:
+    img_type, _ = mimetypes.guess_type(path)
+    with open(path, "rb") as f:
+        img_b64_str = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{img_type};base64,{img_b64_str}"
+
+
+# ChatGPT に画像を送信して説明を取得する関数
+def get_image_description(model: str, url: str) -> Output:
+    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+    prompt = """以下の画像の内容を3つの粒度で説明してください
+1. 画像に書かれているテキストをそのまま読む (ocr_text)
+2. 文脈を知らない人向けの見たままの内容説明 (100字以下) (description_minor)
+3. 文脈を知ってる人向けの深い内容説明 (100字以下) (description_major)
+"""
+    response = client.beta.chat.completions.parse(
+        model=model,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {"url": url},
+                    },
+                ],
+            }
+        ],
+        response_format=Output,
+    )
+    output = response.choices[0].message.parsed
+    assert output, "Error in ChatGPT API"
+    return output
+
+
+@click.command()
+@click.option("--model", type=str, default="gpt-4o")
+@click.argument("image", type=str)
+def main(model: str, image: str):
+    """OCR.py
+
+    IMAGE is URL or Path.
+    """
+    if image.startswith("http://") or image.startswith("https://"):
+        image_url = image
+    else:
+        image_url = tobase64(image)
+    click.secho(image_url)
+    result = get_image_description(model, image_url)
+    print(
+        json.dumps(
+            {
+                "ocr_text": result.ocr_text,
+                "description_minor": result.description_minor,
+                "description_major": result.description_major,
+            },
+            ensure_ascii=False,
+        )
+    )
+
+
+if __name__ == "__main__":
+    main()
