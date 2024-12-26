@@ -15,6 +15,7 @@ class Output(BaseModel):
     description_minor: str
     description_major: str
     short: str
+    tags: list[str]
 
 
 def tobase64(path: str) -> str:
@@ -27,11 +28,14 @@ def tobase64(path: str) -> str:
 # ChatGPT に画像を送信して説明を取得する関数
 def get_image_description(model: str, url: str) -> Output:
     client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    prompt = """以下の画像の内容を4つの粒度で説明してください
+    prompt = """以下の画像の内容を5つの粒度で説明してください
 1. 画像に書かれているテキストをそのまま読む (ocr_text)
 2. 文脈を知らない人向けの見たままの内容説明 (100字以下) (description_minor)
 3. 文脈を知ってる人向けの深い内容説明 (100字以下) (description_major)
 4. 2と3を要約して 一言で内容説明 (short)
+5. キーワードとなるタグ (単語) を5つ列挙 (tags)
+
+ただし「アニメや漫画であること」や「キャラクターが話していること」は当たり前すぎるので説明不要
 """
     response = client.beta.chat.completions.parse(
         model=model,
@@ -74,6 +78,7 @@ def main(model: str, image: str):
                 "description_minor": result.description_minor,
                 "description_major": result.description_major,
                 "short": result.short,
+                "tags": result.tags,
             },
             ensure_ascii=False,
         )
