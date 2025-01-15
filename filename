@@ -16,6 +16,10 @@ class Filename:
         return os.path.splitext(filename)[0]
 
     @staticmethod
+    def dirname(filename: str) -> str:
+        return os.path.dirname(filename)
+
+    @staticmethod
     def extension(filename: str) -> str:
         return os.path.splitext(filename)[1][1:]
 
@@ -27,14 +31,24 @@ class Filename:
 @click.command()
 @click.option("--basename", "-B", is_flag=True)
 @click.option("--root", "-R", is_flag=True)
+@click.option("--dirname", "-D", is_flag=True)
 @click.option("--extension", "-E", is_flag=True)
 @click.option("--tail-root", "-T", is_flag=True)
 @click.argument("filename", type=str, required=True)
-def main(basename: bool, root: bool, extension: bool, tail_root: bool, filename: str):
+def main(
+    basename: bool,
+    root: bool,
+    dirname: bool,
+    extension: bool,
+    tail_root: bool,
+    filename: str,
+):
     if basename:
         print(Filename.basename(filename))
     elif root:
         print(Filename.root(filename))
+    elif dirname:
+        print(Filename.dirname(filename))
     elif extension:
         print(Filename.extension(filename))
     elif tail_root:
@@ -45,6 +59,7 @@ def main(basename: bool, root: bool, extension: bool, tail_root: bool, filename:
                 {
                     "basename": Filename.basename(filename),
                     "root": Filename.root(filename),
+                    "dirname": Filename.dirname(filename),
                     "extension": Filename.extension(filename),
                     "tail": {"root": Filename.tail_root(filename)},
                 }
