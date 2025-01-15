@@ -33,8 +33,8 @@ class WithCache:
         self.debug = debug
         os.makedirs(self.cachedir, exist_ok=True)
 
-    def trace(self, msg: str, fg="red"):
-        if self.debug:
+    def trace(self, msg: str, fg="red", force: bool = False):
+        if self.debug or force:
             click.secho(msg, err=True, fg=fg)
 
     def run(self, args: list[str]):
@@ -48,9 +48,13 @@ class WithCache:
         if self.hit(hashfile):
             print(hashfile.read_text())
         else:
-            result = subprocess.run(
-                args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-            )
+            try:
+                result = subprocess.run(
+                    args, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+                )
+            except FileNotFoundError as err:
+                self.trace(str(err), force=True)
+                exit(127)
             self.trace(f"command = {args}", fg="green")
             self.trace(f"result = {result}", fg="yellow")
             if result.stderr:
