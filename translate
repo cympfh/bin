@@ -49,10 +49,10 @@ JSON の前後に余計なテキストを出力しないでください.
 
 あなたが返すJSONのフォーマットは次です
 
-{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "gpt", "text": "{{翻訳結果}}", "pinyin": "{{中国語の場合のみ, 普通話での標準的な拼音}}" }}
+{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "{self.model_name}", "text": "{{翻訳結果}}", "pinyin": "{{中国語の場合のみ, 普通話での標準的な拼音}}" }}
 
 "target_language" の値は {target_lang.upper()} になるはずです
-"model" の値は "gpt" で固定しておいてください
+"model" は "{self.model_name}" で固定
 
 ではこれから翻訳したい文章を次に与えます.
 あなたはその言語の先生になったつもりで, より良い翻訳結果を一つ JSON 形式で示してください.
