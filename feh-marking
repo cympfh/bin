@@ -1,0 +1,36 @@
+#!/bin/bash
+
+cat <<EOM >&2
+Usage:
+- Hit 0 to mark
+- Hit 1 to unmark
+- Space/Backspace to next/prev
+- q to quit
+EOM
+echo -n "OK?" >&2
+read OK
+
+feh -dZF \
+  --action "echo MARK %F" \
+  --action1 "echo UNMARK %F" \
+  . >/tmp/feh-marking.out
+
+cat /tmp/feh-marking.out | awk '
+{
+  operation = $1
+  item = $0
+  sub(/^[^[:space:]]+[[:space:]]+/, "", item)
+  if (operation == "MARK") {
+    states[item] = 1  # MARK操作の場合、状態をマーク済みに設定
+  } else if (operation == "UNMARK") {
+    states[item] = 0  # UNMARK操作の場合、状態を非マークに設定
+  }
+}
+END {
+  for (item in states) {
+    if (states[item] == 1) {
+      print item
+    }
+  }
+}
+'
