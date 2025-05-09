@@ -2,7 +2,9 @@
 import logging
 import subprocess
 import shlex
-from typing import Optional
+import time
+import re
+from datetime import datetime, timedelta
 
 import click
 import watchgod
@@ -15,21 +17,136 @@ logging.basicConfig(
 log = logging.getLogger("rich")
 
 
+class TimeSchedule:
+    """Time-based schedule
+
+    Attributes
+    ----------
+    target: datetime.datetime
+        次に実行する時刻
+    period: datetime.timedelta
+        ループする場合の実行間隔
+    """
+
+    def __init__(self, at: str | None, after: str | None):
+        if (at and after) or (not at and not after):
+            raise click.UsageError("Options --at and --after are mutually exclusive")
+        now = datetime.now()
+        if at:
+            try:
+                t = datetime.strptime(at, "%H:%M:%S").time()
+            except ValueError:
+                t = datetime.strptime(at, "%H:%M").time()
+            target = datetime.combine(now.date(), t)
+            if target <= now:
+                target += timedelta(days=1)
+            self.target = target
+            self.period = timedelta(days=1)
+        elif after:
+            m = re.match(r"^\+?(\d+)([smh])$", after)
+            if not m:
+                raise click.BadParameter(
+                    "Invalid format for --after, expected e.g. +10s, 5m, 2h"
+                )
+            num, unit = m.groups()
+            num = float(num)
+            if unit == "s":
+                delta = timedelta(seconds=num)
+            elif unit == "m":
+                delta = timedelta(minutes=num)
+            else:  # 'h'
+                delta = timedelta(hours=num)
+            self.target = now + delta
+            self.period = delta
+
+    def run(self, loop: bool, cmd: str | None):
+        """スケジュールの実行
+
+        Parameters
+        ----------
+        loop
+            ループするかどうか
+        cmd
+            実行するコマンド
+        """
+        while True:
+            now = datetime.now()
+            wait_secs = (self.target - now).total_seconds()
+            if wait_secs > 0:
+                log.info(
+                    "Weasel waiting until %s", self.target.strftime("%Y-%m-%d %H:%M:%S")
+                )
+                time.sleep(wait_secs)
+            log.info(
+                "Trigger time reached: %s", datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+            if cmd:
+                log.info("Running: %s", cmd)
+                result = subprocess.run(shlex.split(cmd))
+                log.info("Exit code: %d", result.returncode)
+            self.target += self.period
+            if not loop:
+                break
+
+
+class FileSchedule:
+    """File-based schedule
+
+    Attributes
+    ----------
+    path: str
+        Path to watch for changes
+    """
+
+    def __init__(self, path: str):
+        self.path = path
+
+    def run(self, loop: bool, cmd: str | None):
+        """スケジュールの実行
+
+        Parameters
+        ----------
+        loop
+            ループするかどうか
+        cmd
+            実行するコマンド
+        """
+        log.info("Weasel watching %s (loop=%s)", self.path, loop)
+        for change in watchgod.watch(self.path):
+            mod_files = [f for _, f in change]
+            log.info("Modified: %s", ", ".join(mod_files))
+            if cmd:
+                log.info("Running: %s", cmd)
+                result = subprocess.run(shlex.split(cmd))
+                log.info("Exit code: %d", result.returncode)
+            if not loop:
+                return
+
+
 @click.command()
-@click.option("--loop", "-L", is_flag=True)
-@click.option("--cmd", type=str, default=None)
-@click.argument("path", default=".")
-def main(loop: bool, cmd: Optional[str], path: str):
-    log.info("Weasel Watching %s (loop=%s)", path, loop)
-    for change in watchgod.watch(path):
-        mod_files = [f for _, f in change]
-        log.info("Modified: %s", ', '.join(mod_files))
-        if cmd:
-            log.info("Running: %s", cmd)
-            result = subprocess.run(shlex.split(cmd))
-            log.info("Exit code: %d", result.returncode)
-        if not loop:
-            return
+@click.option("--loop", "-L", is_flag=True, help="Repeat trigger if set")
+@click.option("--cmd", "-c", type=str, default=None, help="Command to run on trigger")
+@click.option(
+    "--at", type=str, default=None, help="Absolute time to trigger (HH:MM or HH:MM:SS)"
+)
+@click.option(
+    "--after",
+    type=str,
+    default=None,
+    help="Relative delay to trigger (e.g. +10s, 5m, 2h)",
+)
+@click.argument("path", required=False, default=".")
+def main(
+    loop: bool,
+    cmd: str | None,
+    at: str | None,
+    after: str | None,
+    path: str,
+):
+    if at or after:
+        TimeSchedule(at, after).run(loop, cmd)
+    elif path:
+        FileSchedule(path).run(loop, cmd)
 
 
 if __name__ == "__main__":
