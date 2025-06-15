@@ -1,4 +1,3 @@
 #!/bin/bash
 
-touch /tmp/memo
-$EDITOR /tmp/memo
+$EDITOR $HOME/Dropbox/memo/etmp.md
