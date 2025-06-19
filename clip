@@ -33,7 +33,7 @@ if ( command -v clip.exe >/dev/null ); then
     COMMANDSET=wsl
 elif ( command -v xsel >/dev/null ); then
     COMMANDSET=xsel
-elif ( command -v pbcopy >/dev/null ) && ( command -v pbcopy >/dev/null ); then
+elif ( command -v pbcopy >/dev/null ) && ( command -v pbpaste >/dev/null ); then
     COMMANDSET=mac
 else
     err "Not found commandset for Clipboard in your System."
@@ -41,14 +41,22 @@ fi
 
 if [ "$COMMANDSET" = "wsl" ]; then
     TMP_WSL=~/Downloads/clip.txt
-    if [ -d /mnt/c/Users/cympfh ]; then
-        TMP_WIN='C:/Users/cympfh/Downloads/clip.txt'
-    elif [ -d /mnt/c/Users/cympf ]; then
-        TMP_WIN='C:/Users/cympf/Downloads/clip.txt'
-    elif [ -d /mnt/c/Users/kazuhiro_hattori ]; then
-        TMP_WIN='C:/Users/kazuhiro_hattori/Downloads/clip.txt'
+
+    # Cache Windows username (persistent)
+    CACHE_FILE="/tmp/.clip_winuser"
+    if [ -f "$CACHE_FILE" ]; then
+        WIN_USER=$(cat "$CACHE_FILE" 2>/dev/null)
     else
-        err "Cannot locate a clip file on your Windows System"
+        WIN_USER=$(powershell.exe -c "echo \$env:USERNAME" | tr -d '\r')
+        echo "$WIN_USER" > "$CACHE_FILE" 2>/dev/null
+    fi
+
+    if [ -z "$WIN_USER" ]; then
+        err "Cannot get Windows username"
+    elif [ -d "/mnt/c/Users/$WIN_USER" ]; then
+        TMP_WIN="C:/Users/$WIN_USER/Downloads/clip.txt"
+    else
+        err "Cannot locate Windows user directory: /mnt/c/Users/$WIN_USER"
     fi
 fi
 
