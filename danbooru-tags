@@ -1,0 +1,6 @@
+#!/bin/bash
+
+URL=$1
+curl -sL $URL |
+  web-grep '<section class="image-container note-container" data-tags="{}"></section>' |
+  sed 's/ /,/g; s/_/ /g'
