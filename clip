@@ -29,8 +29,10 @@ err() {
 
 # detect clipboard command
 COMMANDSET=
-if ( command -v clip.exe >/dev/null ); then
-    COMMANDSET=wsl
+if ( command -v lemonade >/dev/null ); then
+    COMMANDSET=lemonade
+elif ( command -v clip.exe >/dev/null ); then
+    COMMANDSET=powershell
 elif ( command -v xsel >/dev/null ); then
     COMMANDSET=xsel
 elif ( command -v pbcopy >/dev/null ) && ( command -v pbpaste >/dev/null ); then
@@ -39,7 +41,7 @@ else
     err "Not found commandset for Clipboard in your System."
 fi
 
-if [ "$COMMANDSET" = "wsl" ]; then
+if [ "$COMMANDSET" = "powershell" ]; then
     TMP_WSL=~/Downloads/clip.txt
 
     # Cache Windows username (persistent)
@@ -86,7 +88,10 @@ done
 
 copy_text() {
     case "$COMMANDSET" in
-        "wsl" )
+        "lemonade" )
+            lemonade copy
+            ;;
+        "powershell" )
             cat | nkf -s >$TMP_WSL
             powershell.exe /c "Get-Content $TMP_WIN | Set-Clipboard"
             ;;
@@ -104,7 +109,10 @@ copy_text() {
 
 paste_text() {
     case "$COMMANDSET" in
-        "wsl" )
+        "lemonade" )
+            lemonade paste
+            ;;
+        "powershell" )
             powershell.exe /c "Get-Clipboard -Format Text > $TMP_WIN"
             cat $TMP_WSL | nkf | tr -d '\r'
             ;;
