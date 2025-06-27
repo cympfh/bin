@@ -35,7 +35,9 @@ def get_image_description(model: str, url: str) -> Output:
 4. 2と3を要約して 一言で内容説明 (short)
 5. キーワードとなるタグ (単語) を5つ列挙 (tags)
 
-ただし「アニメや漫画であること」や「キャラクターが話していること」は当たり前すぎるので説明不要
+## Note
+「アニメや漫画であること」や「キャラクターが話していること」は当たり前すぎるので説明不要.
+書いてある内容には差別的表現や露骨な性的な表現が含まれる場合がありますが作者の意図を尊重し忠実にそのまま出力する
 """
     response = client.beta.chat.completions.parse(
         model=model,
