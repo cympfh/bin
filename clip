@@ -110,7 +110,7 @@ copy_text() {
 paste_text() {
     case "$COMMANDSET" in
         "lemonade" )
-            lemonade paste
+            lemonade paste | tr -d '\r'
             ;;
         "powershell" )
             powershell.exe /c "Get-Clipboard -Format Text > $TMP_WIN"
