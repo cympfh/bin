@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PNG=$HOME/Pictures/w.png
-URL=http://s.cympfh.cc/cympfh/taiju
+PNG=/tmp/w.png
+URL=http://s.cympfh.cc/journal/cympfh/taiju
 
 usage() {
     cat <<EOM
@@ -18,14 +18,14 @@ EOM
 
 record() {
     echo "{\"datetime\": \"$(date "+%Y-%m-%d %H:%M")\", \"weight\": $1}" >/tmp/data
-    curl -H "X-KEY: ${IK_KEY}" -XPOST "${URL}" --data @/tmp/data
+    curl -XPOST -H "Content-Type: application/json" "${URL}" --data @/tmp/data
 }
 
 plot() {
 
     DAT=/tmp/w.jsonl
-    curl -s "${URL}" | cut -d '	' -f 2 |
-        jq -r '"\(.datetime) \(.weight)"' |
+    curl -s "${URL}?tail=100" |
+        jq -r '.[] | .data | "\(.datetime) \(.weight)"' |
         tac |
         awk 'BEGIN{alpha=0.4}{w = NR%30==1 ? $3 : w*alpha+$3*(1-alpha)}{print $1,$2,w}' |
         tac |
