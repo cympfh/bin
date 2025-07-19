@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+from PIL import Image
+import click
+
+
+def calculate_average_color(pixels):
+    avg_r = sum(pixel[0] for pixel in pixels) // len(pixels)
+    avg_g = sum(pixel[1] for pixel in pixels) // len(pixels)
+    avg_b = sum(pixel[2] for pixel in pixels) // len(pixels)
+    return (avg_r, avg_g, avg_b)
+
+
+def trim_to_pixel_size(img, pixel_size):
+    width, height = img.size
+    new_width = (width // pixel_size) * pixel_size
+    new_height = (height // pixel_size) * pixel_size
+
+    if new_width != width or new_height != height:
+        return img.crop((0, 0, new_width, new_height))
+    return img
+
+
+def fill_pixel_block(image, x, y, pixel_size, color):
+    for py in range(y, y + pixel_size):
+        for px in range(x, x + pixel_size):
+            image.putpixel((px, py), color)
+
+
+def pixelate_image(img, pixel_size):
+    img = trim_to_pixel_size(img, pixel_size)
+    width, height = img.size
+    pixelated = Image.new('RGB', (width, height))
+
+    for y in range(0, height, pixel_size):
+        for x in range(0, width, pixel_size):
+            region = img.crop((x, y, x + pixel_size, y + pixel_size))
+            pixels = list(region.getdata())
+            avg_color = calculate_average_color(pixels)
+            fill_pixel_block(pixelated, x, y, pixel_size, avg_color)
+
+    return pixelated
+
+
+@click.command()
+@click.option('-p', '--pixel-size', type=int, default=10, help='Size of each pixel block')
+@click.argument('input_image', type=click.Path(exists=True, dir_okay=False))
+@click.argument('output_image', type=click.Path())
+def main(pixel_size, input_image, output_image):
+    with Image.open(input_image) as img:
+        img = img.convert('RGB')
+        pixelated = pixelate_image(img, pixel_size)
+        pixelated.save(output_image)
+        print(f"Pixel art saved to {output_image}")
+
+
+if __name__ == "__main__":
+    main()
