@@ -81,8 +81,8 @@ JSON の前後に余計なテキストを出力しないでください.
 @click.option(
     "--model",
     "-m",
-    type=click.Choice(["gpt-4o", "gpt-4o-mini"]),
-    default="gpt-4o",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
     show_default=True,
 )
 @click.option("--source", "-s", type=str, default="unknown", help="source language")

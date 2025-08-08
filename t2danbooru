@@ -62,7 +62,13 @@ Danbooru 語では何もより画像の情報を正確に表現することが�
 
 
 @click.command()
-@click.option("--model", "-m", type=str, default="gpt-4o")
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
 @click.argument("text", type=str, required=False)
 def main(
     model: str,

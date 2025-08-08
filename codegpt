@@ -15,8 +15,9 @@ class CodeOutput(BaseModel):
 
 
 class ChatGPT:
-    def __init__(self):
+    def __init__(self, model_name: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model_name = model_name
 
     def chat(self, language: str, text: str) -> CodeOutput:
         """自然言語で書いてほしいコードを説明する
@@ -55,7 +56,7 @@ class ChatGPT:
             },
         ]
         result = self.client.beta.chat.completions.parse(
-            model="gpt-4o",
+            model=self.model_name,
             messages=messages,  # type: ignore
             response_format=CodeOutput,
         )
@@ -144,10 +145,18 @@ def main():
 
 @main.command()
 @click.option("--language", "-L", type=str, default="Rust")
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
 @click.option("--quiet", "-q", is_flag=True, default=False)
 @click.argument("text", type=str, required=False)
 def chat(
     language: str,
+    model: str,
     quiet: bool,
     text: str,
 ):
@@ -155,7 +164,7 @@ def chat(
         text = sys.stdin.read()
     if not quiet:
         click.secho("Running...", err=True, fg="yellow")
-    result = ChatGPT().chat(language, text)
+    result = ChatGPT(model).chat(language, text)
     if not quiet:
         click.secho(f"Language: {result.language}", err=True)
         click.secho(f"Explanation: {result.explanation}", err=True)
@@ -164,10 +173,18 @@ def chat(
 
 @main.command()
 @click.option("--language", "-L", type=str, default="?")
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
 @click.option("--quiet", "-q", is_flag=True, default=False)
 @click.argument("src", type=str, required=False)
 def complete(
     language: str,
+    model: str,
     quiet: bool,
     src: str,
 ):
@@ -177,7 +194,7 @@ def complete(
         code = sys.stdin.read()
     if not quiet:
         click.secho("Running...", err=True, fg="yellow")
-    result = ChatGPT().complete(language, code)
+    result = ChatGPT(model).complete(language, code)
     if not quiet:
         click.secho(f"Language: {result.language}", err=True)
         click.secho(f"Explanation: {result.explanation}", err=True)

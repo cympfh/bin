@@ -61,7 +61,13 @@ def get_image_description(model: str, url: str) -> Output:
 
 
 @click.command()
-@click.option("--model", type=str, default="gpt-4o")
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
 @click.argument("image", type=str)
 def main(model: str, image: str):
     """OCR.py

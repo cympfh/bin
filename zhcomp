@@ -7,10 +7,9 @@ import click
 
 
 class ChatGPT:
-    MODEL_NAME = "gpt-4o"
-
-    def __init__(self):
+    def __init__(self, model_name: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.model_name = model_name
 
     def run(self, text: str) -> str | None:
         system_prompt = f"""
@@ -57,7 +56,7 @@ JSON の前後に余計なテキストを出力しないでください.
 
 あなたが返すJSONのフォーマットは次です
 
-{{ "completed": {{"text": "{{修正されたテキスト}}", "pinyin": "{{修正されたテキストに対応するピンイン表記}}" }}, "content": "{{テキストの意味（日本語）}}" }}
+{{ "model": "{self.model_name}", "completed": {{"text": "{{修正されたテキスト}}", "pinyin": "{{修正されたテキストに対応するピンイン表記}}" }}, "content": "{{テキストの意味（日本語）}}" }}
 """
         messages = [
             {
@@ -74,20 +73,28 @@ JSON の前後に余計なテキストを出力しないでください.
             },
         ]
         result = self.client.chat.completions.create(
-            model=self.MODEL_NAME,
+            model=self.model_name,
             messages=messages,
         )
         return result.choices[0].message.content
 
 
 @click.command()
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
 @click.argument("text", type=str, required=False)
 def main(
+    model: str,
     text: str,
 ):
     if not text:
         text = sys.stdin.read()
-    result = ChatGPT().run(text)
+    result = ChatGPT(model).run(text)
     print(result)
 
 

@@ -81,7 +81,7 @@ class Translate:
 自然言語の翻訳をしてください.
 
 翻訳元になる言語: 不明 (与えられる文から推測せよ)
-翻訳先になる言語: {' / '.join(target_lang_description)}
+翻訳先になる言語: {" / ".join(target_lang_description)}
 
 ユーザーから文章が与えられます.
 文章は
@@ -164,7 +164,11 @@ Good night!
 
 @click.command()
 @click.option(
-    "--lazy", "-L", type=int, default=0, help="入力中状態を何秒作るか. デフォルトでは 0 秒 (作らない)"
+    "--lazy",
+    "-L",
+    type=int,
+    default=0,
+    help="入力中状態を何秒作るか. デフォルトでは 0 秒 (作らない)",
 )
 @click.option(
     "--translate",
@@ -174,7 +178,18 @@ Good night!
     help="翻訳する場合, その翻訳先言語をカンマ区切りで複数並べる. デフォルトでは翻訳しない",
 )
 @click.option(
-    "--ignore-self", "-I", is_flag=True, default=False, help="翻訳するとき元の言語も載せるか"
+    "--ignore-self",
+    "-I",
+    is_flag=True,
+    default=False,
+    help="翻訳するとき元の言語も載せるか",
+)
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
 )
 @click.option("--quiet", "-q", is_flag=True, default=False, help="通知音を消すモード")
 @click.option("--verbose", "-v", is_flag=True, default=False, help="冗長モード")
@@ -184,12 +199,12 @@ def main(
     lazy: int,
     translate: str,
     ignore_self: bool,
+    model: str,
     quiet: bool,
     verbose: bool,
     dry_run: bool,
     messages: list[str],
 ):
-
     text: str
     if not messages:
         text = sys.stdin.read()

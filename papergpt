@@ -40,9 +40,9 @@ class ChatGPT:
 ただし登場する術語 (technical term) は無理に和訳せず そのまま英語のまま使ってよい
 """
 
-    def __init__(self, title: str, abst: str):
+    def __init__(self, model_name: str, title: str, abst: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
+        self.model_name = model_name
         self.messages = [
             {"role": "system", "content": self.SYSTEM_PROMPT},
             {
@@ -93,7 +93,7 @@ class ChatGPT:
             }
         )
         result = self.client.chat.completions.create(
-            model="gpt-4o",
+            model=self.model_name,
             messages=self.messages,  # type: ignore
         )
         self.messages.pop()
@@ -122,7 +122,14 @@ class Arxiv:
 
 @click.command()
 @click.option("--arxiv", type=str, default="")
-def main(arxiv: str):
+@click.option(
+    "--model",
+    "-m",
+    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
+    default="gpt-5-nano",
+    show_default=True,
+)
+def main(arxiv: str, model: str):
     if arxiv:
         title, abst = Arxiv(arxiv).info()
     else:
@@ -134,7 +141,7 @@ def main(arxiv: str):
             return
 
     TUI.write("TITLE", title, "green", hr=False)
-    gpt = ChatGPT(title, abst)
+    gpt = ChatGPT(model, title, abst)
     if gpt.abst:
         TUI.write("ABST", gpt.abst, "blue", hr=True)
 
