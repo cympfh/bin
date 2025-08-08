@@ -1,9 +1,11 @@
 #!/bin/bash
 
 fetch() {
-    curl -s http://www.hinode-hinoiri.com/131016.html |
-    grep strong | sed 's/<[^>]*>//g; s/時/ /g; s/分//g' |
-    head -n 2 | tr '\n' ' '
+    curl -sL http://www.hinode-hinoiri.com/131016.html |
+        web-grep '<table><tbody><tr><td class=size32>{}</td></tr></tbody></table>' |
+        sed 's/<[^>]*>//g; s/時/ /g; s/分//g' |
+        head -n 2 |
+        tr '\n' ' '
 }
 
 now() {
