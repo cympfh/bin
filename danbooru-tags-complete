@@ -1,0 +1,13 @@
+#!/bin/bash
+
+KEYWORD="$1"
+if [ -z "$KEYWORD" ]; then
+  echo "Usage: $0 <keyword>"
+  exit 1
+fi
+
+curl -sL "https://danbooru.donmai.us/autocomplete?search%5Bquery%5D=$(uri-encode "$KEYWORD" )&search%5Btype%5D=tag_query&version=3&limit=20" |
+  web-grep '<a href={}></a>' |
+  grep '/posts?tags=' |
+  sed 's@/posts?tags=@@g' |
+  uri-encode -d
