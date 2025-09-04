@@ -1,13 +1,70 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-KEYWORD="$1"
-if [ -z "$KEYWORD" ]; then
-  echo "Usage: $0 <keyword>"
-  exit 1
-fi
+import sys
+import urllib.parse
+import urllib.request
+import re
 
-curl -sL "https://danbooru.donmai.us/autocomplete?search%5Bquery%5D=$(uri-encode "$KEYWORD" )&search%5Btype%5D=tag_query&version=3&limit=20" |
-  web-grep '<a href={}></a>' |
-  grep '/posts?tags=' |
-  sed 's@/posts?tags=@@g' |
-  uri-encode -d
+
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: danbooru-tags-complete <keyword>")
+        sys.exit(1)
+
+    keyword = sys.argv[1]
+    encoded_keyword = urllib.parse.quote(keyword)
+
+    url = f"https://danbooru.donmai.us/autocomplete?search%5Bquery%5D={encoded_keyword}&search%5Btype%5D=tag_query&version=3&limit=20"
+
+    try:
+        with urllib.request.urlopen(url) as response:
+            html = response.read().decode("utf-8")
+    except Exception as e:
+        print(f"Error fetching data: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    # Find all <li> elements
+    li_pattern = r'<li class="ui-menu-item"[^>]*>.*?</li>'
+    li_matches = re.findall(li_pattern, html, re.DOTALL)
+
+    for li_content in li_matches:
+        # Extract data attributes from the full li element
+        value_match = re.search(r'data-autocomplete-value="([^"]*)"', li_content)
+        type_match = re.search(r'data-autocomplete-type="([^"]*)"', li_content)
+        count_match = re.search(r'<span class="post-count">([^<]*)</span>', li_content)
+
+        if not (value_match and count_match):
+            continue
+
+        tag_value = value_match.group(1)
+        tag_type = type_match.group(1) if type_match else ""
+        post_count = count_match.group(1)
+
+        if tag_type == "tag-other-name":
+            # This is an alias - extract the original and target
+            antecedent_match = re.search(
+                r'<span class="autocomplete-antecedent"><b>([^<]*)</b>', li_content
+            )
+            extra_match = re.search(r"</b>(<span>[^<]*</span>)", li_content)
+            arrow_match = re.search(
+                r'<span class="autocomplete-arrow">→</span>\s*([^<]*?)\s*</a>',
+                li_content,
+            )
+
+            if antecedent_match and arrow_match:
+                original = antecedent_match.group(1)
+                target = arrow_match.group(1).strip()
+                extra = ""
+
+                if extra_match:
+                    extra = re.sub(r"<[^>]*>", "", extra_match.group(1))
+
+                print(f"{original}{extra} → {target} ({post_count})")
+        else:
+            # Regular completion
+            decoded_tag = urllib.parse.unquote(tag_value).replace("_", " ")
+            print(f"{decoded_tag} ({post_count})")
+
+
+if __name__ == "__main__":
+    main()
