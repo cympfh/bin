@@ -26,15 +26,20 @@ pyright
 
 # フォーマット
 black .
+
+# リンティング
+ruff check
 ```
 
 ## アーキテクチャ
 
 ### スクリプト構成
 
-- `./bin/{FILE}` - メインスクリプト（直接実行可能）
-- `./bin/external/{FILE}` - 外部コマンドのダウンロードスクリプト
-- `./bin/stuff/{FILE}` - ダウンロードされた外部コマンド
+- 実行可能スクリプト（65個）- 直接実行可能、拡張子なし
+  - Python スクリプト（22個、33.8%）
+  - Bash スクリプト（36個、55.4%）
+  - Ruby スクリプト（6個、9.2%）
+  - その他（1個）
 
 ### 主要なツール分類
 
@@ -43,35 +48,73 @@ black .
 - `zhcomp` - 中国語テキスト修正・ピンイン変換（OpenAI API使用）
 - `translate` - 多言語翻訳（OpenAI API使用）
 - `codegpt`, `papergpt` - ChatGPT系ツール
+- `ocr` - OCR機能
 
 #### システム・ユーティリティ
 
 - `weasel` - ファイル監視・時間ベースコマンド実行（watchgod使用）
 - `withcache` - コマンド結果キャッシング（TTL対応）
-- `clip` - クリップボード操作
+- `clip` - クリップボード操作（Linux/WSL/macOS対応）
 - `progressbar` - プログレスバー表示
+- `notify` - システム通知
 
 #### メディア・グラフィック
 
 - `amesh` - 天気レーダー画像取得
 - `imagediff`, `imagehash` - 画像処理
 - `feh-marking` - 画像マーキング
+- `pixelart` - ピクセルアート処理
+- `eye` - MP3メタデータ管理
+
+#### Web・データ処理
+
+- `tenki` - 天気情報（OpenWeatherMap API）
+- `switchbot` - SwitchBot API連携
+- `html-title`, `html-encode` - HTML処理
+- `json2yaml`, `yaml2json`, `toml2json` - フォーマット変換
+- `danbooru-tags-complete` - Danbooruタグ補完
+
+#### 時間・日付ツール
+
+- `jdate` - 日本のカレンダー・日の出日の入り計算
+- `timer` - 時間計測
+- `calendar` - 拡張カレンダー機能
+
+#### 開発・テキスト処理
+
+- `jinja2` - テンプレート処理
+- `filename` - ファイル名ユーティリティ
+- `uri-encode` - URL エンコーディング
 
 ### 共通パターン
 
 #### Pythonスクリプトの特徴
 
 - `click` ライブラリによるCLI実装
-- 型アノテーション完備
+- 型アノテーション完備（モダンな `str | None` 構文使用）
 - `rich` による美しいログ出力
 - 標準入力からのテキスト読み込み対応（`sys.stdin.read()`）
 - `--help` / `-h` フラグによるヘルプ表示
+- パイプライン対応設計
+
+#### クロスプラットフォーム対応
+
+- クリップボード操作: xsel/pbcopy/PowerShell（WSL）の自動検出
+- 日付処理: GNU/BSD dateコマンドの差異対応
+- パス処理: Unix/Windows パス対応（WSL環境考慮）
+
+#### API連携パターン
+
+- 環境変数による設定管理（`OPENAI_API_KEY` など）
+- 適切な認証処理（OAuth, HMAC-SHA256 for SwitchBot）
+- ネットワークエラーハンドリング
+- レスポンスキャッシュ機能
 
 #### OpenAI API使用ツール
 
 - 環境変数 `OPENAI_API_KEY` が必要
 - JSON形式での構造化レスポンス
-- gpt-4o / gpt-4o-mini モデル選択可能
+- gpt-4o / gpt-4o-mini / gpt-5 モデル選択可能
 
 ## 使用方法
 
@@ -81,6 +124,4 @@ PATH設定例:
 
 ```bash
 export PATH=$PATH:/home/cympfh/bin
-export PATH=$PATH:/home/cympfh/bin/external
-export PATH=$PATH:/home/cympfh/bin/stuff
 ```

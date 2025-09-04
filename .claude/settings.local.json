@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./danbooru-tags-complete \"leg\")",
+      "Bash(./danbooru-tags-complete \"ミニスカート\")",
+      "Bash(python3:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
