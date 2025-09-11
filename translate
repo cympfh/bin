@@ -4,6 +4,7 @@ import sys
 import openai
 import os
 import click
+from pydantic import BaseModel
 
 
 LANGS = {
@@ -29,6 +30,14 @@ else:
     DEFAULT_MODEL = "gpt-4.1-nano"
 
 
+class Response(BaseModel):
+    model: str
+    detected_source_language: str
+    target_language: str
+    text: str
+    pinyin: str | None = None
+
+
 class ChatGPT:
     def __init__(self, model_name: str):
         self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -36,7 +45,7 @@ class ChatGPT:
 
     def run(
         self, text: str, source_lang: str = "unknown", target_lang: str = "ja"
-    ) -> str | None:
+    ) -> Response:
         source_lang_description = LANGS[source_lang]
         target_lang_description = LANGS[target_lang]
         system_prompt = f"""
@@ -61,12 +70,15 @@ JSON の前後に余計なテキストを出力しないでください.
 
 あなたが返すJSONのフォーマットは次です
 
-{{ "detected_source_language": "{{翻訳元の言語, 例えば EN や JA}}", "target_language": "{{ 翻訳先の言語, 例えば JA や EN }}", "model": "{self.model_name}", "text": "{{翻訳結果}}", "pinyin": "{{中国語の場合のみ, 普通話での標準的な拼音}}" }}
+{{
+    "model": "{self.model_name}",
+    "detected_source_language": "${{翻訳元の言語, 例えば EN や JA}}",
+    "target_language": "{target_lang.upper()}",
+    "text": "${{翻訳結果}}",
+    "pinyin": "${{中国語の場合のみ, 普通話での標準的な拼音}}"
+}}
 
-"target_language" の値は {target_lang.upper()} になるはずです
-"model" は "{self.model_name}" で固定
-
-ではこれから翻訳したい文章を次に与えます.
+では翻訳したい文章を次に与えます.
 あなたはその言語の先生になったつもりで, より良い翻訳結果を一つ JSON 形式で示してください.
 """
         messages = [
@@ -83,11 +95,12 @@ JSON の前後に余計なテキストを出力しないでください.
 """,
             },
         ]
-        result = self.client.chat.completions.create(
+        result = self.client.chat.completions.parse(
             model=self.model_name,
             messages=messages,  # type: ignore
+            response_format=Response,
         )
-        return result.choices[0].message.content
+        return result.choices[0].message.parsed  # type: ignore
 
 
 @click.command()
@@ -114,7 +127,7 @@ def main(
     assert target in LANGS, f"Supported langs: {LANGS}"
 
     result = ChatGPT(model).run(text, source_lang=source, target_lang=target)
-    print(result)
+    print(result.model_dump_json())
 
 
 if __name__ == "__main__":
