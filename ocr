@@ -9,6 +9,21 @@ import click
 import openai
 from pydantic import BaseModel
 
+MODELS = [
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-4o",
+    "gpt-4o-mini",
+]
+if os.getenv("OPENAI_MODEL") in MODELS:
+    DEFAULT_MODEL = os.getenv("OPENAI_MODEL")
+else:
+    DEFAULT_MODEL = "gpt-5-nano"
+
 
 class Output(BaseModel):
     ocr_text: str
@@ -64,8 +79,8 @@ def get_image_description(model: str, url: str) -> Output:
 @click.option(
     "--model",
     "-m",
-    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
-    default="gpt-5-nano",
+    type=click.Choice(MODELS),
+    default=DEFAULT_MODEL,
     show_default=True,
 )
 @click.argument("image", type=str)

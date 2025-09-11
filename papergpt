@@ -8,6 +8,21 @@ import easy_scraper
 import openai
 import requests
 
+MODELS = [
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-4o",
+    "gpt-4o-mini",
+]
+if os.getenv("OPENAI_MODEL") in MODELS:
+    DEFAULT_MODEL = os.getenv("OPENAI_MODEL")
+else:
+    DEFAULT_MODEL = "gpt-5-mini"
+
 
 class TUI:
     @staticmethod
@@ -125,8 +140,8 @@ class Arxiv:
 @click.option(
     "--model",
     "-m",
-    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
-    default="gpt-5-nano",
+    type=click.Choice(MODELS),
+    default=DEFAULT_MODEL,
     show_default=True,
 )
 def main(arxiv: str, model: str):

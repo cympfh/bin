@@ -5,6 +5,21 @@ import openai
 import os
 import click
 
+MODELS = [
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-4o",
+    "gpt-4o-mini",
+]
+if os.getenv("OPENAI_MODEL") in MODELS:
+    DEFAULT_MODEL = os.getenv("OPENAI_MODEL")
+else:
+    DEFAULT_MODEL = "gpt-4.1-nano"
+
 
 class ChatGPT:
     def __init__(self, model_name: str):
@@ -74,7 +89,7 @@ JSON の前後に余計なテキストを出力しないでください.
         ]
         result = self.client.chat.completions.create(
             model=self.model_name,
-            messages=messages,
+            messages=messages,  # type: ignore
         )
         return result.choices[0].message.content
 
@@ -83,8 +98,8 @@ JSON の前後に余計なテキストを出力しないでください.
 @click.option(
     "--model",
     "-m",
-    type=click.Choice(["gpt-5", "gpt-5-mini", "gpt-5-nano", "gpt-4o", "gpt-4o-mini"]),
-    default="gpt-5-nano",
+    type=click.Choice(MODELS),
+    default=DEFAULT_MODEL,
     show_default=True,
 )
 @click.argument("text", type=str, required=False)
