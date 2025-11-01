@@ -1,0 +1,494 @@
+#!/bin/env python3
+
+"""
+キーワードとして同人誌のタイトルやそのサークル名を与えると、
+その同人誌の頒布イベントを検索するコマンドラインツール
+"""
+
+import click
+import httpx
+from bs4 import BeautifulSoup
+import re
+from dataclasses import dataclass
+
+
+@dataclass
+class SearchResult:
+    title: str
+    circle_name: str
+    author_name: str
+    event: str
+    url: str
+
+
+class SearchEngine:
+    def normalize_query(self, query: str) -> str:
+        """ASCII記号を空白文字に置き換える"""
+        # ASCII記号のリスト（アルファベット・数字・空白以外）
+        ascii_symbols = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
+        normalized = ""
+        for char in query:
+            if char in ascii_symbols:
+                normalized += " "
+            else:
+                normalized += char
+
+        # 連続する空白を単一の空白にまとめる
+        normalized = re.sub(r"\s+", " ", normalized).strip()
+        return normalized
+
+    def search(self, query: str) -> SearchResult | None:
+        """検索クエリにヒットして得られた結果があれば返す"""
+
+
+class Melonbooks(SearchEngine):
+    def search(self, query: str) -> SearchResult | None:
+        try:
+            query = self.normalize_query(query)
+            url = "https://www.melonbooks.co.jp/search/search.php"
+            params = {"search_target": "1", "name": query, "pageno": "1"}
+
+            with httpx.Client() as client:
+                response = client.get(url, params=params, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # 商品詳細ページへのリンクを探す
+                product_links = soup.find_all(
+                    "a", href=re.compile(r"/detail/detail\.php\?product_id=")
+                )
+
+                if not product_links:
+                    return None
+
+                # 最初の商品の詳細ページを取得
+                first_product_url = (
+                    f"https://www.melonbooks.co.jp{product_links[0]['href']}"
+                )
+                detail_response = client.get(first_product_url, timeout=10)
+                detail_response.raise_for_status()
+
+                detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+
+                # タイトルを取得
+                title_elem = detail_soup.find(
+                    "h1", class_="page-header"
+                ) or detail_soup.find("title")
+                title = title_elem.get_text(strip=True) if title_elem else "不明"
+
+                # サークル名と著者名を取得
+                circle_name = "不明"
+                author_name = "不明"
+
+                # サークル名を探す
+                circle_info = detail_soup.find("td", string=re.compile(r"サークル"))
+                if circle_info:
+                    circle_cell = circle_info.find_next_sibling("td")
+                    if circle_cell:
+                        circle_name = circle_cell.get_text(strip=True)
+
+                # 著者名を探す
+                author_info = detail_soup.find(
+                    "td", string=re.compile(r"作者|著者|作家")
+                )
+                if author_info:
+                    author_cell = author_info.find_next_sibling("td")
+                    if author_cell:
+                        author_name = author_cell.get_text(strip=True)
+
+                # 別のパターンでサークル名・著者名を探す
+                for th in detail_soup.find_all("th"):
+                    th_text = th.get_text()
+                    if "サークル" in th_text and circle_name == "不明":
+                        td = th.find_next_sibling("td")
+                        if td:
+                            circle_name = td.get_text(strip=True)
+                    elif (
+                        "作者" in th_text or "著者" in th_text or "作家" in th_text
+                    ) and author_name == "不明":
+                        td = th.find_next_sibling("td")
+                        if td:
+                            author_name = td.get_text(strip=True)
+
+                # イベント情報を探す
+                event_text = None
+                event_info = detail_soup.find("td", string=re.compile(r"イベント|頒布"))
+                if event_info:
+                    event_cell = event_info.find_next_sibling("td")
+                    if event_cell:
+                        event_text = event_cell.get_text(strip=True)
+
+                # 別のパターンでイベント情報を探す
+                if not event_text or event_text == "-":
+                    for th in detail_soup.find_all("th"):
+                        if "イベント" in th.get_text() or "頒布" in th.get_text():
+                            td = th.find_next_sibling("td")
+                            if td:
+                                event_text = td.get_text(strip=True)
+                                if event_text and event_text != "-":
+                                    break
+
+                if event_text and event_text != "-":
+                    return SearchResult(
+                        title=title,
+                        circle_name=circle_name,
+                        author_name=author_name,
+                        event=event_text,
+                        url=first_product_url,
+                    )
+
+                return None
+
+        except Exception:
+            return None
+
+
+class Toranoana(SearchEngine):
+    def search(self, query: str) -> SearchResult | None:
+        try:
+            query = self.normalize_query(query)
+            url = "https://ec.toranoana.jp/tora_r/ec/app/catalog/list"
+            params = {"searchWord": query}
+
+            with httpx.Client() as client:
+                response = client.get(url, params=params, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # 商品一覧から最初の商品のリンクを取得
+                product_links = soup.find_all(
+                    "a", href=re.compile(r"/tora_r/ec/item/[0-9]+/")
+                )
+
+                if not product_links:
+                    return None
+
+                # 最初の商品の詳細ページを取得
+                first_product_url = product_links[0]["href"]
+                if not first_product_url.startswith("http"):
+                    first_product_url = "https://ec.toranoana.jp" + first_product_url
+
+                detail_response = client.get(first_product_url, timeout=10)
+                detail_response.raise_for_status()
+
+                detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+
+                # タイトルを取得
+                title_elem = detail_soup.find("h1") or detail_soup.find("title")
+                title = title_elem.get_text(strip=True) if title_elem else "不明"
+
+                # より正確にタイトルを取得（商品名部分のみ）
+                title_in_desc = detail_soup.find("div", class_="product-detail-desc")
+                if title_in_desc:
+                    lines = [
+                        line.strip()
+                        for line in title_in_desc.get_text().split("\n")
+                        if line.strip()
+                    ]
+                    if lines:
+                        title = lines[0]
+
+                # サークル名・著者名・イベント情報を取得（product-detail-spec内から）
+                circle_name = "不明"
+                author_name = "不明"
+                event_text = None
+
+                spec_div = detail_soup.find("div", class_="product-detail-spec")
+                if spec_div:
+                    all_text = spec_div.get_text()
+                    lines = [
+                        line.strip() for line in all_text.split("\n") if line.strip()
+                    ]
+
+                    for i, line in enumerate(lines):
+                        # サークル名を探す
+                        if line == "サークル名" and i + 1 < len(lines):
+                            circle_name = lines[i + 1]
+
+                        # 著者名を探す
+                        if (
+                            line == "作者" or line == "著者" or line == "作家"
+                        ) and i + 1 < len(lines):
+                            author_name = lines[i + 1]
+
+                        # イベント情報を探す
+                        if line == "初出イベント" and i + 1 < len(lines):
+                            event_text = lines[i + 1]
+
+                # 別の方法でサークル名・著者名を探す（テキストベース）
+                if circle_name == "不明" or author_name == "不明":
+                    all_text = detail_soup.get_text()
+                    lines = [
+                        line.strip() for line in all_text.split("\n") if line.strip()
+                    ]
+                    for i, line in enumerate(lines):
+                        if (
+                            line == "サークル名："
+                            and i + 1 < len(lines)
+                            and circle_name == "不明"
+                        ):
+                            circle_name = lines[i + 1]
+                        elif (
+                            (line in ["作者：", "著者：", "作家："])
+                            and i + 1 < len(lines)
+                            and author_name == "不明"
+                        ):
+                            author_name = lines[i + 1]
+
+                if event_text and event_text != "-":
+                    return SearchResult(
+                        title=title,
+                        circle_name=circle_name,
+                        author_name=author_name,
+                        event=event_text,
+                        url=first_product_url,
+                    )
+
+                return None
+
+        except Exception:
+            return None
+
+
+class DLsite(SearchEngine):
+    def search(self, query: str) -> SearchResult | None:
+        try:
+            query = self.normalize_query(query)
+            import urllib.parse
+
+            # キーワードをURLエンコード
+            encoded_keyword = urllib.parse.quote(query, safe="")
+
+            # パス形式のURL構築
+            url = f"https://www.dlsite.com/maniax/fsr/=/language/jp/sex_category%5B0%5D/male/keyword/{encoded_keyword}/work_category%5B0%5D/doujin/work_category%5B1%5D/books/order/trend/options_and_or/and/options%5B0%5D/JPN/options%5B1%5D/NM/from/fs.header"
+
+            with httpx.Client() as client:
+                response = client.get(url, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # 商品詳細ページへのリンクを探す
+                product_links = soup.find_all(
+                    "a", href=re.compile(r"/maniax/work/=/product_id/[^/]+\.html")
+                )
+
+                if not product_links:
+                    return None
+
+                # 最初の商品の詳細ページを取得
+                first_product_url = product_links[0]["href"]
+                if not first_product_url.startswith("http"):
+                    first_product_url = "https://www.dlsite.com" + first_product_url
+
+                detail_response = client.get(first_product_url, timeout=10)
+                detail_response.raise_for_status()
+
+                detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+
+                # タイトルを取得
+                title_elem = (
+                    detail_soup.find("h1", id="work_name")
+                    or detail_soup.find("h1")
+                    or detail_soup.find("title")
+                )
+                title = title_elem.get_text(strip=True) if title_elem else "不明"
+
+                # サークル名を取得
+                circle_name = "不明"
+                circle_link = detail_soup.find(
+                    "a", href=re.compile(r"/circle/profile/=/maker_id/")
+                )
+                if circle_link:
+                    circle_name = circle_link.get_text(strip=True)
+
+                # 著者名を取得（通常はサークル名と同じことが多い）
+                author_name = circle_name
+
+                # イベント情報を探す
+                event_text = None
+
+                # テーブル形式で情報を探す
+                for th in detail_soup.find_all("th"):
+                    th_text = th.get_text(strip=True)
+                    if "イベント" in th_text or "頒布" in th_text:
+                        td = th.find_next_sibling("td")
+                        if td:
+                            event_text = td.get_text(strip=True)
+                            if event_text and event_text != "-":
+                                break
+
+                # dt/dd形式でも探す
+                if not event_text or event_text == "-":
+                    for dt in detail_soup.find_all("dt"):
+                        if "イベント" in dt.get_text() or "頒布" in dt.get_text():
+                            dd = dt.find_next_sibling("dd")
+                            if dd:
+                                event_text = dd.get_text(strip=True)
+                                if event_text and event_text != "-":
+                                    break
+
+                # 作品概要内でも探す
+                if not event_text or event_text == "-":
+                    work_outline = detail_soup.find("div", class_="work_outline")
+                    if work_outline:
+                        text = work_outline.get_text()
+                        # コミケ、例大祭などのイベント名パターンをチェック
+                        event_patterns = [
+                            r"(コミケ\d+|C\d+|コミックマーケット\d+)",
+                            r"(例大祭\d+)",
+                            r"(コミティア\d+)",
+                            r"(M3-\d+|M3 \d+)",
+                            r"(サンクリ\d+)",
+                        ]
+                        for pattern in event_patterns:
+                            match = re.search(pattern, text)
+                            if match:
+                                event_text = match.group(1)
+                                break
+
+                if event_text and event_text != "-":
+                    return SearchResult(
+                        title=title,
+                        circle_name=circle_name,
+                        author_name=author_name,
+                        event=event_text,
+                        url=first_product_url,
+                    )
+
+                return None
+
+        except Exception:
+            return None
+
+
+class NyaHentai(SearchEngine):
+    def search(self, query: str) -> SearchResult | None:
+        try:
+            query = self.normalize_query(query)
+            import urllib.parse
+
+            encoded_query = urllib.parse.quote(query, safe="")
+            search_url = f"https://nyahentai.re/?s={encoded_query}"
+
+            with httpx.Client() as client:
+                response = client.get(search_url, timeout=10)
+                response.raise_for_status()
+
+                soup = BeautifulSoup(response.text, "html.parser")
+
+                # 作品ページへのリンクを探す
+                product_links = soup.find_all(
+                    "a", href=re.compile(r"/fanzine/[^/]+/?$")
+                )
+
+                if not product_links:
+                    return None
+
+                # 最初の作品の詳細ページを取得
+                first_product_url = product_links[0]["href"]
+                if not first_product_url.startswith("http"):
+                    first_product_url = "https://nyahentai.re" + first_product_url
+
+                detail_response = client.get(first_product_url, timeout=10)
+                detail_response.raise_for_status()
+
+                detail_soup = BeautifulSoup(detail_response.text, "html.parser")
+
+                # タイトルを取得
+                title_elem = detail_soup.find("h1") or detail_soup.find("title")
+                title = title_elem.get_text(strip=True) if title_elem else "不明"
+
+                # post-tag div からタグ情報を取得
+                post_tag_div = detail_soup.find("div", id="post-tag")
+
+                circle_name = "不明"
+                author_name = "不明"
+                event_text = None
+
+                if post_tag_div:
+                    # サークル名を探す
+                    circle_links = post_tag_div.find_all(
+                        "a", href=re.compile(r"/circle/.*"), rel="tag"
+                    )
+                    if circle_links:
+                        circle_name = circle_links[0].get_text(strip=True)
+
+                    # 作者名を探す
+                    author_links = post_tag_div.find_all(
+                        "a", href=re.compile(r"/artist/.*"), rel="tag"
+                    )
+                    if author_links:
+                        author_name = author_links[0].get_text(strip=True)
+
+                    # イベント情報を探す
+                    genre_links = post_tag_div.find_all(
+                        "a", href=re.compile(r"/genre/.*"), rel="tag"
+                    )
+                    for link in genre_links:
+                        link_text = link.get_text(strip=True)
+                        # コミケ系のイベント名パターンをチェック
+                        if re.match(r"^C\d+$", link_text) or "コミケ" in link_text:
+                            event_text = link_text.upper()
+                            break
+                        # その他のイベントパターン
+                        event_patterns = [
+                            r"例大祭",
+                            r"コミティア",
+                            r"M3",
+                            r"サンクリ",
+                            r"Comic1☆",
+                        ]
+                        if any(
+                            pattern.upper() in link_text.upper()
+                            for pattern in event_patterns
+                        ):
+                            event_text = link_text.upper()
+                            break
+
+                if event_text and event_text != "-":
+                    return SearchResult(
+                        title=title,
+                        circle_name=circle_name,
+                        author_name=author_name,
+                        event=event_text,
+                        url=first_product_url,
+                    )
+
+                return None
+
+        except Exception:
+            return None
+
+
+@click.command()
+@click.argument("query")
+def main(query: str):
+    result = None
+    if result is None:
+        result = NyaHentai().search(query)
+    if result is None:
+        result = Toranoana().search(query)
+    if result is None:
+        result = Melonbooks().search(query)
+    if result is None:
+        result = DLsite().search(query)
+
+    if result is None:
+        click.secho("Not Found", fg="red")
+    else:
+        click.secho(f"タイトル: {result.title}", fg="cyan")
+        click.secho(f"サークル名: {result.circle_name}", fg="yellow")
+        click.secho(f"著者名: {result.author_name}", fg="yellow")
+        click.secho(
+            f"{result.circle_name} ({result.author_name})", fg="yellow", bold=True
+        )
+        click.secho(f"イベント: {result.event}", fg="magenta")
+        click.secho(f"URL: {result.url}", fg="blue")
+
+
+if __name__ == "__main__":
+    main()

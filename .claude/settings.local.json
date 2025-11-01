@@ -3,7 +3,10 @@
     "allow": [
       "Bash(./danbooru-tags-complete \"leg\")",
       "Bash(./danbooru-tags-complete \"ミニスカート\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(source .venv/bin/activate)"
     ],
     "deny": [],
     "ask": []

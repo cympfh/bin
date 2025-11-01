@@ -1,0 +1,32 @@
+#!/bin/bash
+
+if ( ! type magick >/dev/null 2>&1 ); then
+  exit 2
+fi
+
+SUBCOMMAND="$1"
+IMAGE="$2"
+
+OUTPUT="${IMAGE%.*}_$SUBCOMMAND.${IMAGE##*.}"
+
+case "$1" in
+  level60 )
+    magick "$IMAGE" -level 0%,60% "$OUTPUT"
+    ;;
+  level70 )
+    magick "$IMAGE" -level 0%,70% "$OUTPUT"
+    ;;
+  level80 )
+    magick "$IMAGE" -level 0%,80% "$OUTPUT"
+    ;;
+  x2 )
+    magick "$IMAGE" -resize 200% "$OUTPUT"
+    ;;
+  x4 )
+    magick "$IMAGE" -resize 400% "$OUTPUT"
+    ;;
+  * )
+    echo "Unknown subcommand: $SUBCOMMAND"
+    exit 1
+    ;;
+esac

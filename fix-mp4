@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# 破損した mp4 ファイルを再エンコードして修復を試みる
+# Ref: https://chatgpt.com/share/68cb7819-77d8-800c-89d6-82ff51ced9de
+
+INPUT=$1
+case "$INPUT" in
+  *.mp4) ;;
+  *) echo "Input file must be an .mp4 file"; exit 1 ;;
+esac
+
+OUTPUT="${INPUT%.*}_fixed.mp4"
+
+ffmpeg -hide_banner -i "${INPUT}" \
+  -vf "format=yuv420p,setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709" \
+  -c:v libx264 -preset slow -crf 18 -pix_fmt yuv420p -profile:v high -level 4.1 \
+  -af "aresample=48000:resampler=soxr" \
+  -c:a aac -profile:a aac_low -b:a 192k \
+  -movflags +faststart "${OUTPUT}"
+
+echo "${INPUT} => ${OUTPUT}"
