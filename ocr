@@ -3,34 +3,30 @@
 import base64
 import json
 import mimetypes
-import os
+import subprocess
 
 import click
-import openai
-from pydantic import BaseModel
+from litellm import completion
+from pydantic import BaseModel, Field
 
-MODELS = [
-    "gpt-5",
-    "gpt-5-mini",
-    "gpt-5-nano",
-    "gpt-4.1",
-    "gpt-4.1-mini",
-    "gpt-4.1-nano",
-    "gpt-4o",
-    "gpt-4o-mini",
-]
-if os.getenv("OPENAI_MODEL") in MODELS:
-    DEFAULT_MODEL = os.getenv("OPENAI_MODEL")
-else:
-    DEFAULT_MODEL = "gpt-5-nano"
+# OCR は OpenAI が高精度
+LLM_CONFIG = json.loads(
+    subprocess.run(["llm-config", "openai"], capture_output=True).stdout.decode("utf-8")
+)
+LLM_CONFIG["model"] = "gpt-4.1-mini"
 
 
 class Output(BaseModel):
-    ocr_text: str
-    description_minor: str
-    description_major: str
-    short: str
-    tags: list[str]
+    model: str = Field(description="Model name used for description")
+    ocr_text: str = Field(description="Text read from the image (OCR result)")
+    description_minor: str = Field(
+        description="Description for people unfamiliar with the context"
+    )
+    description_major: str = Field(
+        description="In-depth description for people familiar with the context"
+    )
+    short: str = Field(description="One-word summary of the content")
+    tags: list[str] = Field(description="Five keyword tags")
 
 
 def tobase64(path: str) -> str:
@@ -42,8 +38,7 @@ def tobase64(path: str) -> str:
 
 # ChatGPT に画像を送信して説明を取得する関数
 def get_image_description(model: str, url: str) -> Output:
-    client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-    prompt = """以下の画像の内容を5つの粒度で説明してください
+    prompt = f"""以下の画像の内容を5つの粒度で説明してください
 1. 画像に書かれているテキストをそのまま読む (ocr_text)
 2. 文脈を知らない人向けの見たままの内容説明 (100字以下) (description_minor)
 3. 文脈を知ってる人向けの深い内容説明 (100字以下) (description_major)
@@ -53,8 +48,18 @@ def get_image_description(model: str, url: str) -> Output:
 ## Note
 「アニメや漫画であること」や「キャラクターが話していること」は当たり前すぎるので説明不要.
 書いてある内容には差別的表現や露骨な性的な表現が含まれる場合がありますが作者の意図を尊重し忠実にそのまま出力する
+
+## Output Format
+{{
+    "model": "{model}",
+    "ocr_text": "...",
+    "description_minor": "...",
+    "description_major": "...",
+    "short": "...",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
+}}
 """
-    response = client.beta.chat.completions.parse(
+    response = completion(
         model=model,
         messages=[
             {
@@ -70,21 +75,27 @@ def get_image_description(model: str, url: str) -> Output:
         ],
         response_format=Output,
     )
-    output = response.choices[0].message.parsed
-    assert output, "Error in ChatGPT API"
-    return output
+    content: str = response.choices[0].message.content  # type: ignore
+    return Output.model_validate_json(content)
 
 
 @click.command()
 @click.option(
+    "--provider",
+    "-p",
+    type=click.Choice(["xai", "gemini", "openai", "anthropic"]),
+    default=LLM_CONFIG["provider"],
+    show_default=True,
+)
+@click.option(
     "--model",
     "-m",
-    type=click.Choice(MODELS),
-    default=DEFAULT_MODEL,
+    type=str,
+    default=LLM_CONFIG["model"],
     show_default=True,
 )
 @click.argument("image", type=str)
-def main(model: str, image: str):
+def main(provider: str, model: str, image: str):
     """OCR.py
 
     IMAGE is URL or Path.
@@ -93,14 +104,17 @@ def main(model: str, image: str):
         image_url = image
     else:
         image_url = tobase64(image)
-    result = get_image_description(model, image_url)
+    result = get_image_description(f"{provider}/{model}", image_url)
     print(
         json.dumps(
             {
-                "ocr_text": result.ocr_text,
-                "description_minor": result.description_minor,
-                "description_major": result.description_major,
-                "short": result.short,
+                "model": result.model,
+                "ocr": {"text": result.ocr_text},
+                "description": {
+                    "minor": result.description_minor,
+                    "major": result.description_major,
+                    "short": result.short,
+                },
                 "tags": result.tags,
             },
             ensure_ascii=False,
