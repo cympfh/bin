@@ -10,9 +10,10 @@ from pydantic import BaseModel, Field
 
 # reasoning モデルをデフォルトに
 LLM_CONFIG = json.loads(
-    subprocess.run(["llm-config", "xai"], capture_output=True).stdout.decode("utf-8")
+    subprocess.run(
+        ["llm-config", "xai", "grok-4-fast-reasoning"], capture_output=True
+    ).stdout.decode("utf-8")
 )
-LLM_CONFIG["model"] = "grok-4-fast-reasoning"
 
 
 class CodeOutput(BaseModel):

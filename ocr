@@ -11,9 +11,10 @@ from pydantic import BaseModel, Field
 
 # OCR は OpenAI が高精度
 LLM_CONFIG = json.loads(
-    subprocess.run(["llm-config", "openai"], capture_output=True).stdout.decode("utf-8")
+    subprocess.run(
+        ["llm-config", "openai", "gpt-4.1-mini"], capture_output=True
+    ).stdout.decode("utf-8")
 )
-LLM_CONFIG["model"] = "gpt-4.1-mini"
 
 
 class Output(BaseModel):
