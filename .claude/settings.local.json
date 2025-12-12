@@ -3,6 +3,9 @@
     "allow": [
       "Bash(python3:*)",
       "Bash(find:*)"
+      "Bash(python:*)",
+      "Bash(curl:*)",
+      "Bash(source .venv/bin/activate)"
     ],
     "deny": [],
     "ask": []
