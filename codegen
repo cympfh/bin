@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 # reasoning モデルをデフォルトに
 LLM_CONFIG = json.loads(
     subprocess.run(
-        ["llm-config", "xai", "grok-4-fast-reasoning"], capture_output=True
+        ["llm-config", "xai", "grok-code-fast"], capture_output=True
     ).stdout.decode("utf-8")
 )
 
