@@ -36,15 +36,16 @@ ruff check
 ### スクリプト構成
 
 - 実行可能スクリプト（65個）- 直接実行可能、拡張子なし
-  - Python スクリプト（22個、33.8%）
-  - Bash スクリプト（36個、55.4%）
+  - Python スクリプト（21個、32.3%）
+  - Bash スクリプト（37個、56.9%）
   - Ruby スクリプト（6個、9.2%）
-  - その他（1個）
+  - その他（1個、1.5%）
 
 ### 主要なツール分類
 
 #### AI/NLP関連
 
+- `codegen` - LLMによるコード生成・プレースホルダー補完（litellm使用、複数プロバイダー対応）
 - `zhcomp` - 中国語テキスト修正・ピンイン変換（OpenAI API使用）
 - `translate` - 多言語翻訳（OpenAI API使用）
 - `codegpt`, `papergpt` - ChatGPT系ツール
@@ -110,11 +111,23 @@ ruff check
 - ネットワークエラーハンドリング
 - レスポンスキャッシュ機能
 
-#### OpenAI API使用ツール
+#### LLM/API使用ツール
 
-- 環境変数 `OPENAI_API_KEY` が必要
-- JSON形式での構造化レスポンス
-- gpt-4o / gpt-4o-mini / gpt-5 モデル選択可能
+全てのLLMツールは `litellm` を使用し、複数プロバイダー対応（xAI, Gemini, OpenAI, Anthropic）:
+
+- `codegen`: コード生成・プレースホルダー補完
+  - デフォルト: xai/grok-4-fast-reasoning
+  - `chat` サブコマンド: 自然言語からコード生成
+  - `complete` サブコマンド: `{{ }}` プレースホルダー補完
+- `zhcomp`: 中国語テキスト修正・ピンイン変換
+  - 簡体字修正、ピンイン出力、日本語翻訳
+- `translate`: 多言語翻訳
+  - 自動言語検出、中国語の場合はピンイン付き
+
+共通仕様:
+- `llm-config` コマンドで設定管理
+- 構造化出力（Pydantic BaseModel + `response_format`）
+- `-p/--provider` と `-m/--model` オプションでモデル選択可能
 
 ## 使用方法
 

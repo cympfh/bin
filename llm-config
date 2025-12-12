@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Supporting
+# - xai: x.AI (Grok)
+# - gemini: Google AI Studio (Gemini)
+# - openai: OpenAI (ChatGPT)
+# - anthropic: Anthropic (Claude)
+#
+# API KEYs should be set in environment variables:
+#   https://docs.litellm.ai/docs/providers
+
+PREFERRED_LLM_PROVIDER="$1"
+PREFERRED_LLM_MODEL="$2"
+
+LLM_PROVIDER=
+LLM_MODEL=
+LLM_API_KEY=
+
+read_xai() {
+    LLM_PROVIDER="xai"
+    LLM_MODEL="${PREFERRED_LLM_MODEL:-$XAI_MODEL}"
+    LLM_MODEL="${LLM_MODEL:-grok-4-1-fast-non-reasoning}"
+    LLM_API_KEY="$XAI_API_KEY"
+}
+
+read_gemini() {
+    LLM_PROVIDER="gemini"
+    LLM_MODEL="${PREFERRED_LLM_MODEL:-$GEMINI_MODEL}"
+    LLM_MODEL="${LLM_MODEL:-gemini-2.5-flash}"
+    LLM_API_KEY="$GEMINI_API_KEY"
+}
+
+read_openai() {
+    LLM_PROVIDER="openai"
+    LLM_MODEL="${PREFERRED_LLM_MODEL:-$OPENAI_MODEL}"
+    LLM_MODEL="${LLM_MODEL:-gpt-4o}"
+    LLM_API_KEY="$OPENAI_API_KEY"
+}
+
+read_anthropic() {
+    LLM_PROVIDER="anthropic"
+    LLM_MODEL="${PREFERRED_LLM_MODEL:-$ANTHROPIC_MODEL}"
+    LLM_MODEL="${LLM_MODEL:-claude-sonnet}"
+    LLM_API_KEY="$ANTHROPIC_API_KEY"
+}
+
+if [ "$PREFERRED_LLM_PROVIDER" == "xai" ]; then
+    read_xai
+elif [ "$PREFERRED_LLM_PROVIDER" == "gemini" ]; then
+    read_gemini
+elif [ "$PREFERRED_LLM_PROVIDER" == "openai" ]; then
+    read_openai
+elif [ "$PREFERRED_LLM_PROVIDER" == "anthropic" ]; then
+    read_anthropic
+elif [ -n "$XAI_API_KEY" ]; then
+    read_xai
+elif [ -n "$GEMINI_API_KEY" ]; then
+    read_gemini
+elif [ -n "$OPENAI_API_KEY" ]; then
+    read_openai
+elif [ -n "$ANTHROPIC_API_KEY" ]; then
+    read_anthropic
+else
+    echo "No LLM API key found"
+    exit 1
+fi
+
+echo '{}' | jq -c \
+    --arg provider "$LLM_PROVIDER" \
+    --arg model "$LLM_MODEL" \
+    --arg api_key "$LLM_API_KEY" \
+    '. + {provider: $provider, model: $model, api_key: $api_key}'

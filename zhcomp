@@ -1,31 +1,22 @@
 #!/usr/bin/env python
 
+import json
+import subprocess
 import sys
-import openai
-import os
-import click
-from pydantic import BaseModel
 
-MODELS = [
-    "gpt-5",
-    "gpt-5-mini",
-    "gpt-5-nano",
-    "gpt-4.1",
-    "gpt-4.1-mini",
-    "gpt-4.1-nano",
-    "gpt-4o",
-    "gpt-4o-mini",
-]
-if os.getenv("OPENAI_MODEL") in MODELS:
-    DEFAULT_MODEL = os.getenv("OPENAI_MODEL")
-else:
-    DEFAULT_MODEL = "gpt-4.1-nano"
+import click
+from litellm import completion
+from pydantic import BaseModel, Field
+
+LLM_CONFIG = json.loads(
+    subprocess.run("llm-config", capture_output=True).stdout.decode("utf-8")
+)
 
 
 class CompletedResponse(BaseModel):
-    text: str
-    pinyin: str
-    text_ja: str
+    text: str = Field(description="Corrected Chinese text")
+    pinyin: str = Field(description="Pinyin representation of the corrected text")
+    text_ja: str = Field(description="Japanese translation of the text")
 
 
 class Response(BaseModel):
@@ -33,10 +24,9 @@ class Response(BaseModel):
     completed: CompletedResponse
 
 
-class ChatGPT:
-    def __init__(self, model_name: str):
-        self.client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-        self.model_name = model_name
+class LLM:
+    def __init__(self, provider: str, model: str):
+        self.model = f"{provider}/{model}"
 
     def run(self, text: str) -> Response:
         system_prompt = f"""
@@ -84,7 +74,7 @@ JSON の前後に余計なテキストを出力しないでください.
 あなたが返すJSONのフォーマットは次です
 
 {{
-    "model": "{self.model_name}",
+    "model": "{self.model}",
     "completed": {{
         "text": "${{修正されたテキスト}}",
         "pinyin": "${{修正されたテキストに対応するピンイン表記}}",
@@ -106,30 +96,39 @@ JSON の前後に余計なテキストを出力しないでください.
 """,
             },
         ]
-        result = self.client.chat.completions.parse(
-            model=self.model_name,
-            messages=messages,  # type: ignore
+        result = completion(
+            model=self.model,
+            messages=messages,
             response_format=Response,
         )
-        return result.choices[0].message.parsed  # type: ignore
+        content: str = result.choices[0].message.content  # type: ignore
+        return Response.model_validate_json(content)
 
 
 @click.command()
 @click.option(
+    "--provider",
+    "-p",
+    type=click.Choice(["xai", "gemini", "openai", "anthropic"]),
+    default=LLM_CONFIG["provider"],
+    show_default=True,
+)
+@click.option(
     "--model",
     "-m",
-    type=click.Choice(MODELS),
-    default=DEFAULT_MODEL,
+    type=str,
+    default=LLM_CONFIG["model"],
     show_default=True,
 )
 @click.argument("text", type=str, required=False)
 def main(
+    provider: str,
     model: str,
     text: str,
 ):
     if not text:
         text = sys.stdin.read()
-    result = ChatGPT(model).run(text)
+    result = LLM(provider, model).run(text)
     print(result.model_dump_json())
 
 
