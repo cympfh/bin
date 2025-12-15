@@ -5,6 +5,7 @@ import subprocess
 import sys
 
 import click
+import watchgod
 from litellm import completion
 from pydantic import BaseModel, Field
 
@@ -70,7 +71,7 @@ class LLM:
         content: str = result.choices[0].message.content  # type: ignore
         return CodeOutput.model_validate_json(content)
 
-    def complete(self, language: str, code: str) -> CodeOutput:
+    def complete(self, language: str, code: str, nosy: str) -> CodeOutput:
         """与えたプログラムコード片のうちプレースホルダーを補完してもらう
 
         {{ ... }} が補完対象
@@ -82,17 +83,29 @@ class LLM:
             プログラミング言語
         code
             プレースホルダーを含むプログラムコード片
+        nosy
+            お節介モード
+            プレースホルダー以外の部分も変更してよい
         """
+
+        nosy_phrase = (
+            "あなたは優秀であるとともに非常にお節介なプログラマです. プレースホルダー以外でも明らか誤りがあれば修正してください"
+            if nosy
+            else "あなたの仕事はプレースホルダーの補完だけです. プレースホルダー以外は絶対に変更しないでください"
+        )
+
         system_prompt = f"""
 Goal: プログラミングの手伝い
-Prompt: あなたはするべきことは プレースホルダー の 補完 です
+Method : あなたはするべきことは プレースホルダー の 補完 です
 
-Method:
-ユーザーはプログラミング言語 ({language}) で書いたコードを示します
-ただしこのコードは {{{{ ... }}}} を含んでおり, これがプレースホルダーです.
+Process:
+- ユーザーはプログラミング言語 ({language}) で書いた（書きかけの）コードを示します
+- このコードは {{{{ ... }}}} で示されるプレースホルダーを含んでいます
+- あなたはプレースホルダーの中身を補完します
 
-Example:
+Input Example:
 
+---
 fn main() {{
     {{{{ Hello, World! をする }}}}
 }}
@@ -104,25 +117,38 @@ fn is_odd(n: usize) -> bool {{
         false
     }}
 }}
+---
 
-Placeholder:
+Output Example:
+
+---
+fn main() {{
+    println!("Hello, World!");
+}}
+
+fn is_odd(n: usize) -> bool {{
+    if n % 2 == 1 {{
+        true
+    }} else {{
+        false
+    }}
+}}
+---
+
+Placeholder の定義:
 {{{{ と }}}} で括られた文字列
 {{{{ と }}}} の間には何も無いかもしれないし, ユーザーの指示が自然言語で書かれてるかもしれない.
-もし指示があるなら, それをヒントにして何をプレースホルダーに書くかよく考えて.
-プレースホルダーの中身が空の場合は, 周囲のコードから正しく類推して.
+もし指示があるなら それをヒントに何を書くか考える.
+プレースホルダーの中身が空の場合は, 周囲のコードから正しく推測せよ.
 あなたは優秀なプログラマです.
 
 Your output:
 プレースホルダー全てを埋めたコードを出力する.
-以下を満たしている必要がある.
-
-1. プレースホルダーだけが補完され変更されている.
-2. 出力はプレースホルダー {{{{ }}}} が登場しない
-3. プレースホルダー以外は全く変更されていない
 
 Note:
-無定義で現れる関数やマクロはあなたが見えない場所が定義されている
-あなたがそれらを使うことは許可されている
+1. プレースホルダーがすべて補完され変更されている.
+2. 出力にはもうプレースホルダー {{{{ }}}} が登場しない
+3. {nosy_phrase}
 """
         messages = [
             {
@@ -169,12 +195,20 @@ def main():
     show_default=True,
 )
 @click.option("--quiet", "-q", is_flag=True, default=False)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output file path (default: stdout)",
+)
 @click.argument("text", type=str, required=False)
 def chat(
     language: str,
     provider: str,
     model: str,
     quiet: bool,
+    output: str | None,
     text: str,
 ):
     if not text:
@@ -185,7 +219,11 @@ def chat(
     if not quiet:
         click.secho(f"Language: {result.language}", err=True)
         click.secho(f"Explanation: {result.explanation}", err=True)
-    print(result.code)
+    if output:
+        with open(output, "w") as f:
+            f.write(result.code)
+    else:
+        print(result.code)
 
 
 @main.command()
@@ -205,26 +243,72 @@ def chat(
     show_default=True,
 )
 @click.option("--quiet", "-q", is_flag=True, default=False)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Output file path (default: stdout)",
+)
+@click.option(
+    "--watch",
+    "-w",
+    is_flag=True,
+    default=False,
+    help="Watch input file for changes and re-run",
+)
+@click.option("--nosy", "-N", is_flag=True, default=False)
 @click.argument("src", type=str, required=False)
 def complete(
     language: str,
     provider: str,
     model: str,
     quiet: bool,
+    output: str | None,
+    watch: bool,
+    nosy: bool,
     src: str,
 ):
-    if src:
-        code = open(src, "rt").read()
+    """Complete placeholders in code
+
+    Watches the input file for changes if --watch is specified.
+    """
+    if watch and not src:
+        raise click.UsageError("--watch requires a source file argument")
+
+    def run_completion():
+        """Run the completion once"""
+        if src:
+            code = open(src, "rt").read()
+        else:
+            code = sys.stdin.read()
+        if not quiet:
+            click.secho(f"Using {provider}/{model}", err=True, fg="yellow")
+            click.secho("Running...", err=True, fg="yellow")
+        result = LLM(provider, model).complete(language, code, nosy)
+        if not quiet:
+            click.secho(f"Language: {result.language}", err=True)
+            click.secho(f"Explanation: {result.explanation}", err=True)
+        if output:
+            with open(output, "w") as f:
+                f.write(result.code)
+        else:
+            print(result.code)
+
+    if watch:
+        # Initial run
+        run_completion()
+
+        # Watch for changes
+        if not quiet:
+            click.secho(f"Watching {src} for changes...", err=True, fg="cyan")
+        for change in watchgod.watch(src):
+            mod_files = [f for _, f in change]
+            if not quiet:
+                click.secho(f"Modified: {', '.join(mod_files)}", err=True, fg="cyan")
+            run_completion()
     else:
-        code = sys.stdin.read()
-    if not quiet:
-        click.secho(f"Using {provider}/{model}", err=True, fg="yellow")
-        click.secho("Running...", err=True, fg="yellow")
-    result = LLM(provider, model).complete(language, code)
-    if not quiet:
-        click.secho(f"Language: {result.language}", err=True)
-        click.secho(f"Explanation: {result.explanation}", err=True)
-    print(result.code)
+        run_completion()
 
 
 if __name__ == "__main__":
