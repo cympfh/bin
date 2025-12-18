@@ -483,9 +483,6 @@ def main(query: str):
         click.secho(f"タイトル: {result.title}", fg="cyan")
         click.secho(f"サークル名: {result.circle_name}", fg="yellow")
         click.secho(f"著者名: {result.author_name}", fg="yellow")
-        click.secho(
-            f"{result.circle_name} ({result.author_name})", fg="yellow", bold=True
-        )
         click.secho(f"イベント: {result.event}", fg="magenta")
         click.secho(f"URL: {result.url}", fg="blue")
 
