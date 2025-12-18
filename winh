@@ -1,0 +1,17 @@
+#!/bin/bash
+
+BIN_CANDIDATES=(
+  ~/git/cympfh/winh/target/x86_64-pc-windows-gnu/release/winh.exe
+  ~/git/winh/target/x86_64-pc-windows-gnu/release/winh.exe
+  ~/git/cympfh/winh/target/x86_64-pc-windows-gnu/debug/winh.exe
+  ~/git/winh/target/x86_64-pc-windows-gnu/debug/winh.exe
+)
+
+for BIN in "${BIN_CANDIDATES[@]}"; do
+  if [ -f "$BIN" ]; then
+    "$BIN" "$@"
+    exit $?
+  fi
+done
+
+echo "Error: winh binary not found. Please build it first." >&2
