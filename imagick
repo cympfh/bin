@@ -1,15 +1,86 @@
 #!/bin/bash
 
 if ( ! type magick >/dev/null 2>&1 ); then
+  echo "Error: magick command not found" >&2
   exit 2
 fi
 
 SUBCOMMAND="$1"
-IMAGE="$2"
+shift
+PROMPT=""
+OUTPUT=""
+while getopts "p:o:" opt; do
+  case $opt in
+    p)
+      PROMPT="$OPTARG"
+      ;;
+    o)
+      OUTPUT="$OPTARG"
+      ;;
+    \?)
+      echo "Invalid option: -$OPTARG" >&2
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND-1))
 
-OUTPUT="${IMAGE%.*}_$SUBCOMMAND.${IMAGE##*.}"
+IMAGE="$1"
+if [ -z "$OUTPUT" ]; then
+  OUTPUT="${IMAGE%.*}_$SUBCOMMAND.${IMAGE##*.}"
+fi
 
-case "$1" in
+ai_subcommand() {
+  if ( ! type codegen >/dev/null 2>&1 ); then
+    echo "Error: codegen command not found (required for 'ai' subcommand)" >&2
+    exit 2
+  fi
+
+  if [ -z "$PROMPT" ]; then
+    echo "Error: -p option is required for 'ai' subcommand" >&2
+    echo "Usage: imagick ai -p \"prompt\" [-o output] <image>" >&2
+    exit 1
+  fi
+
+  if [ -z "$IMAGE" ]; then
+    echo "Error: image file is required" >&2
+    exit 1
+  fi
+
+  # Auto-generate output filename if not specified
+  if [ -z "$OUTPUT" ]; then
+    OUTPUT="${IMAGE%.*}_ai.${IMAGE##*.}"
+  fi
+
+  # Generate magick command using codegen
+  echo "Generating ImageMagick command..." >&2
+  MAGICK_CMD=$(echo "ImageMagick の magick コマンドを1つ生成してください。
+
+入力ファイル: $IMAGE
+出力ファイル: $OUTPUT
+要求: $PROMPT
+
+magick コマンドのみを1行で出力してください。説明やコードブロックは不要です。
+例: magick input.png -fuzz 10% -transparent green output.png" | codegen chat -L bash -q)
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to generate command" >&2
+    exit 1
+  fi
+
+  echo "Generated command: $MAGICK_CMD" >&2
+  eval "$MAGICK_CMD"
+
+  if [ $? -eq 0 ]; then
+    echo "Success: Output saved to $OUTPUT" >&2
+  else
+    echo "Error: Command execution failed" >&2
+    exit 1
+  fi
+
+}
+
+case "$SUBCOMMAND" in
   level60 )
     magick "$IMAGE" -level 0%,60% "$OUTPUT"
     ;;
@@ -24,6 +95,9 @@ case "$1" in
     ;;
   x4 )
     magick "$IMAGE" -resize 400% "$OUTPUT"
+    ;;
+  ai )
+    ai_subcommand
     ;;
   * )
     echo "Unknown subcommand: $SUBCOMMAND"
