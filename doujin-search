@@ -366,13 +366,16 @@ class DLsite(SearchEngine):
 
 
 class NyaHentai(SearchEngine):
-    def search(self, query: str) -> SearchResult | None:
+    def search(self, query: str, verbose: bool) -> SearchResult | None:
         try:
             query = self.normalize_query(query)
             import urllib.parse
 
             encoded_query = urllib.parse.quote(query, safe="")
-            search_url = f"https://nyahentai.re/?s={encoded_query}"
+            search_url = f"https://nyahentai.one/?s={encoded_query}"
+
+            if verbose:
+                click.secho(f"Searching NyaHentai: {search_url}", fg="green", err=True)
 
             with httpx.Client() as client:
                 response = client.get(search_url, timeout=10)
@@ -465,11 +468,14 @@ class NyaHentai(SearchEngine):
 
 
 @click.command()
+@click.option(
+    "--verbose", "-v", is_flag=True, default=False, help="Enable verbose output"
+)
 @click.argument("query")
-def main(query: str):
+def main(verbose: bool, query: str):
     result = None
     if result is None:
-        result = NyaHentai().search(query)
+        result = NyaHentai().search(query, verbose)
     if result is None:
         result = Toranoana().search(query)
     if result is None:
