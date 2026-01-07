@@ -21,54 +21,54 @@ fi
 
 list() {
     cat <<EOM
-100 Continue
-101 Switching Protocols
-200 OK
-201 Created
-202 Accepted
-203 Non-Authoritative Information
-204 No Content
-205 Reset Content
-206 Partial Content
-300 Multiple Choices
-301 Moved Permanently
-302 Found
-303 See Other
-304 Not Modified
-307 Temporary Redirect
-308 Permanent Redirect
-400 Bad Request
-401 Unauthorized
-403 Forbidden
-404 Not Found
-405 Method Not Allowed
-406 Not Acceptable
-407 Proxy Authentication Required
-408 Request Timeout
-409 Conflict
-410 Gone
-411 Length Required
-412 Precondition Failed
-413 Payload Too Large
-414 URI Too Long
-415 Unsupported Media Type
-416 Range Not Satisfiable
-417 Expectation Failed
-418 I'm a teapot
-422 Unprocessable Entity
-425 Too Early
-426 Upgrade Required
-428 Precondition Required
-429 Too Many Requests
-431 Request Header Fields Too Large
-451 Unavailable For Legal Reasons
-500 Internal Server Error
-501 Not Implemented
-502 Bad Gateway
-503 Service Unavailable
-504 Gateway Timeout
-505 HTTP Version Not Supported
-511 Network Authentication Required
+100 Continue - リクエストを継続してもよい
+101 Switching Protocols - プロトコルを切り替えている
+200 OK - リクエストが成功
+201 Created - 新しいリソースの作成に成功
+202 Accepted - リクエストを受理したが処理は未完了
+203 Non-Authoritative Information - プロキシ等が変更した情報を返す
+204 No Content - リクエストは成功したが返すコンテンツがない
+205 Reset Content - リクエストは成功、クライアントは表示をリセットすべき
+206 Partial Content - 部分的なコンテンツ（Rangeリクエストの応答）
+300 Multiple Choices - リソースに複数の選択肢がある
+301 Moved Permanently - リソースが恒久的に新しいURIに移動
+302 Found - リソースが一時的に別のURIにある
+303 See Other - 他のURIをGETで参照すべき
+304 Not Modified - キャッシュが有効で更新されていない
+307 Temporary Redirect - リソースが一時的に別のURIにある（メソッド変更禁止）
+308 Permanent Redirect - リソースが恒久的に新しいURIに移動（メソッド変更禁止）
+400 Bad Request - リクエストの構文が間違っている
+401 Unauthorized - 認証が必要または認証に失敗
+403 Forbidden - アクセス権限がない
+404 Not Found - リソースが見つからない
+405 Method Not Allowed - 指定されたHTTPメソッドは許可されていない
+406 Not Acceptable - Acceptヘッダーの条件を満たすコンテンツがない
+407 Proxy Authentication Required - プロキシの認証が必要
+408 Request Timeout - リクエストがタイムアウト
+409 Conflict - リクエスト内容とサーバーの状態が競合
+410 Gone - リソースは恒久的に削除された
+411 Length Required - Content-Lengthヘッダーが必要
+412 Precondition Failed - 前提条件（If-*ヘッダー）が満たされない
+413 Payload Too Large - リクエストのペイロードが大きすぎる
+414 URI Too Long - URIが長すぎる
+415 Unsupported Media Type - Content-Typeがサポートされていない
+416 Range Not Satisfiable - Rangeヘッダーの範囲が無効
+417 Expectation Failed - Expectヘッダーの要求を満たせない
+418 I'm a teapot - ティーポットにコーヒーを淹れるよう要求された（ジョーク）
+422 Unprocessable Entity - リクエストは正しいが処理できない内容
+425 Too Early - リプレイ攻撃のリスクがあるため早すぎる
+426 Upgrade Required - クライアントは別のプロトコルへアップグレードすべき
+428 Precondition Required - リクエストには条件ヘッダーが必要
+429 Too Many Requests - 短時間に大量のリクエストを送信した
+431 Request Header Fields Too Large - リクエストヘッダーのサイズが大きすぎる
+451 Unavailable For Legal Reasons - 法的理由によりリソースが利用不可
+500 Internal Server Error - サーバー内部でエラーが発生
+501 Not Implemented - リクエストされた機能が実装されていない
+502 Bad Gateway - ゲートウェイまたはプロキシが上位サーバーから不正な応答を受信
+503 Service Unavailable - サーバーが一時的に利用不可（過負荷やメンテナンス）
+504 Gateway Timeout - ゲートウェイまたはプロキシが上位サーバーからの応答待ちでタイムアウト
+505 HTTP Version Not Supported - リクエストで使用されたHTTPバージョンに対応していない
+511 Network Authentication Required - ネットワークへのアクセスに認証が必要
 EOM
 }
 
