@@ -5,6 +5,20 @@ if ( ! type magick >/dev/null 2>&1 ); then
   exit 2
 fi
 
+usage() {
+  cat <<EOM
+Usage: imagick <subcommand> [options] <image>
+
+subcommand
+  level60         Adjust image levels to 60%
+  level70         Adjust image levels to 70%
+  level80         Adjust image levels to 80%
+  x2              Resize image to 2x
+  x4              Resize image to 4x
+  ai -p <prompt>  Generate ImageMagick command using AI based on prompt
+EOM
+}
+
 SUBCOMMAND="$1"
 shift
 PROMPT=""
@@ -69,6 +83,12 @@ magick コマンドのみを1行で出力してください。説明やコード
   fi
 
   echo "Generated command: $MAGICK_CMD" >&2
+  echo -n "Are you sure to execute this command? (y/n): " >&2
+  read -r CONFIRM
+  if [ "$CONFIRM" != "y" ] && [ "$CONFIRM" != "Y" ]; then
+    echo "Aborted by user." >&2
+    exit 0
+  fi
   eval "$MAGICK_CMD"
 
   if [ $? -eq 0 ]; then
@@ -99,8 +119,12 @@ case "$SUBCOMMAND" in
   ai )
     ai_subcommand
     ;;
+  help | --help | -h )
+    usage
+    ;;
   * )
     echo "Unknown subcommand: $SUBCOMMAND"
+    usage
     exit 1
     ;;
 esac
