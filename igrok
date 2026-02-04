@@ -1,0 +1,151 @@
+#!/usr/bin/env python3
+"""igrok - Grok を使った画像生成・編集CLI
+
+Usage:
+    igrok '犬のイラストを描いて' -o dog.png
+    igrok '猫に変換' -i dog.png -o cat_edited.png
+"""
+
+import base64
+import os
+import sys
+from pathlib import Path
+from typing import Literal
+
+import click
+import httpx
+from rich.console import Console
+from xai_sdk import Client
+
+console = Console()
+
+XAI_API_KEY = os.environ.get("XAI_API_KEY")
+
+
+def detect_mime_type(image_bytes: bytes, file_path: str | None = None) -> str:
+    """画像バイト列から MIME タイプを検出"""
+    # JPEG
+    if image_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    # PNG
+    elif image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    # GIF
+    elif image_bytes.startswith(b"GIF87a") or image_bytes.startswith(b"GIF89a"):
+        return "image/gif"
+    # WebP
+    elif image_bytes.startswith(b"RIFF") and image_bytes[8:12] == b"WEBP":
+        return "image/webp"
+    # BMP
+    elif image_bytes.startswith(b"BM"):
+        return "image/bmp"
+
+    # フォールバック
+    import mimetypes
+
+    if file_path:
+        guessed = mimetypes.guess_type(file_path)[0]
+        if guessed:
+            return guessed
+
+    return "image/jpeg"
+
+
+def image_to_data_uri(image_path: Path) -> str:
+    """画像ファイルを Data URI 形式に変換"""
+    image_bytes = image_path.read_bytes()
+    mime_type = detect_mime_type(image_bytes, str(image_path))
+    b64_string = base64.b64encode(image_bytes).decode("utf-8")
+    return f"data:{mime_type};base64,{b64_string}"
+
+
+def download_image(url: str, output_path: Path) -> None:
+    """URL から画像をダウンロードして保存"""
+    with httpx.Client(timeout=60.0) as client:
+        response = client.get(url)
+        response.raise_for_status()
+        output_path.write_bytes(response.content)
+
+
+@click.command()
+@click.argument("prompt")
+@click.option(
+    "-i",
+    "--input",
+    "input_path",
+    type=click.Path(exists=True, path_type=Path),
+    help="編集する画像ファイル（画像編集時のみ）",
+)
+@click.option(
+    "-o",
+    "--output",
+    "output_path",
+    required=True,
+    type=click.Path(path_type=Path),
+    help="出力先ファイルパス",
+)
+@click.option(
+    "-a",
+    "--aspect-ratio",
+    type=click.Choice(["1:1", "3:4", "4:3", "9:16", "16:9"]),
+    default="1:1",
+    help="アスペクト比（画像生成時のみ、デフォルト: 1:1）",
+)
+def main(
+    prompt: str,
+    input_path: Path | None,
+    output_path: Path,
+    aspect_ratio: Literal["1:1", "3:4", "4:3", "9:16", "16:9"],
+) -> None:
+    """Grok を使った画像生成・編集CLI"""
+
+    # API キーチェック
+    if not XAI_API_KEY:
+        console.print("[red]Error:[/red] XAI_API_KEY environment variable is not set.")
+        sys.exit(1)
+
+    try:
+        client = Client(api_key=XAI_API_KEY)
+
+        # 画像編集モード
+        if input_path:
+            console.print(f"[cyan]Editing image:[/cyan] {input_path}")
+            console.print(f"[cyan]Prompt:[/cyan] {prompt}")
+
+            # 画像を Data URI に変換
+            image_data = image_to_data_uri(input_path)
+
+            # Grok API で画像編集
+            response = client.image.sample(
+                model="grok-imagine-image",
+                image_url=image_data,
+                prompt=prompt,
+                image_format="url",
+            )
+
+        # 画像生成モード
+        else:
+            console.print(f"[cyan]Generating image:[/cyan] {prompt}")
+            console.print(f"[cyan]Aspect ratio:[/cyan] {aspect_ratio}")
+
+            # Grok API で画像生成
+            response = client.image.sample(
+                model="grok-imagine-image",
+                prompt=prompt,
+                aspect_ratio=aspect_ratio,
+                image_format="url",
+            )
+
+        # URL から画像をダウンロード
+        console.print(f"[cyan]Downloading:[/cyan] {response.url}")
+        download_image(response.url, output_path)
+
+        console.print(f"[green]✓ Saved:[/green] {output_path}")
+
+    except Exception as e:
+        console.print(f"[red]Error:[/red] {str(e)}")
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
