@@ -1,0 +1,41 @@
+#!/bin/bash
+
+HOST=
+PORT=9096
+
+if ( curl -sL localhost:$PORT/health >/dev/null 2>&1 ); then
+  HOST=localhost
+else
+  HOST=$(curl -sL 'http://s.cympfh.cc/journal/cympfh/ip?tail=1' | jq -sr '.[0][0].data.ip')
+fi
+
+help() {
+  echo "Usage: $0 [summary|help] <message>"
+  exit 0
+}
+
+eliza-post-chat() {
+  CONTENT="$*"
+  curl -sL -XPOST http://${HOST}:$PORT/chat -H 'Content-Type: application/json' -d '{"use_memory": true, "detect_sleep": false, "max_loop": 5, "messages": [{"role": "user", "content": "'"$CONTENT"'"}]}' | jq .
+}
+
+eliza-post-summary() {
+  curl -sL -XPOST http://${HOST}:$PORT/summary -H 'Content-Type: application/json' | jq .
+}
+
+if [ $# -eq 0 ]; then
+  help
+fi
+
+case $1 in
+  "summary" )
+    eliza-post-summary
+    ;;
+  "help" | "-h" | "--help" )
+    help
+    ;;
+  * )
+     eliza-post-chat "$@"
+     ;;
+ esac
+
