@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 
 import base64
-import json
 import hashlib
 import hmac
+import json
 import os
 import time
 import uuid
+from typing import Any
 
-import requests
 import click
+import requests
 
 
 class Switchbot:
@@ -32,7 +33,6 @@ class Switchbot:
             "t": str(t),
             "sign": str(sign, "utf-8"),
             "nonce": str(nonce),
-            "Content-Type": "application/json; charset: utf8",
         }
 
     def __init__(self):
@@ -44,7 +44,7 @@ class Switchbot:
 
     def post(self, uri: str, data):
         url = f"https://api.switch-bot.com{uri}"
-        return requests.post(url, data=data, headers=self.headers).json()
+        return requests.post(url, json=data, headers=self.headers).json()
 
 
 @click.group()
@@ -55,7 +55,7 @@ def main():
 @main.command()
 def devices():
     res = Switchbot().get("/v1.1/devices")
-    print(json.dumps(res["body"]["deviceList"]))
+    print(json.dumps(res["body"]))
 
 
 @main.command()
@@ -67,8 +67,13 @@ def status(device_id: str):
 
 @main.command()
 @click.argument("device_id", type=str)
-def send(device_id: str):
-    res = Switchbot().post(f"/v1.1/devices/{device_id}/commands", {})
+@click.argument("data", type=str, default="")
+def send(device_id: str, data: Any):
+    if data:
+        data_json = json.loads(data)
+    else:
+        data_json = {}
+    res = Switchbot().post(f"/v1.1/devices/{device_id}/commands", data_json)
     print(json.dumps(res))
 
 
