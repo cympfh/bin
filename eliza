@@ -1,41 +1,64 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
-HOST=
-PORT=9096
+import json
 
-if ( curl -sL localhost:$PORT/health >/dev/null 2>&1 ); then
-  HOST=localhost
-else
-  HOST=$(curl -sL 'http://s.cympfh.cc/journal/cympfh/ip?tail=1' | jq -sr '.[0][0].data.ip')
-fi
+import click
+import requests
 
-help() {
-  echo "Usage: $0 [summary|help] <message>"
-  exit 0
-}
+PORT = 9096
 
-eliza-post-chat() {
-  CONTENT="$*"
-  curl -sL -XPOST http://${HOST}:$PORT/chat -H 'Content-Type: application/json' -d '{"use_memory": true, "detect_sleep": false, "max_loop": 5, "messages": [{"role": "user", "content": "'"$CONTENT"'"}]}' | jq .
-}
 
-eliza-post-summary() {
-  curl -sL -XPOST http://${HOST}:$PORT/summary -H 'Content-Type: application/json' | jq .
-}
+def get_host() -> str:
+    try:
+        requests.get(f"http://localhost:{PORT}/health", timeout=2)
+        return "localhost"
+    except Exception:
+        resp = requests.get("http://s.cympfh.cc/journal/cympfh/ip?tail=1")
+        data = resp.json()
+        return data[0][0]["data"]["ip"]
 
-if [ $# -eq 0 ]; then
-  help
-fi
 
-case $1 in
-  "summary" )
-    eliza-post-summary
-    ;;
-  "help" | "-h" | "--help" )
-    help
-    ;;
-  * )
-     eliza-post-chat "$@"
-     ;;
- esac
+class DefaultGroup(click.Group):
+    """未知のサブコマンドを chat にフォールバックするグループ"""
 
+    def resolve_command(self, ctx, args):
+        try:
+            return super().resolve_command(ctx, args)
+        except click.UsageError:
+            return "chat", self.commands["chat"], args
+
+
+@click.group(cls=DefaultGroup, invoke_without_command=True)
+@click.pass_context
+def cli(ctx: click.Context):
+    """Eliza chat CLI"""
+    if ctx.invoked_subcommand is None:
+        click.echo(ctx.get_help())
+
+
+@cli.command()
+def summary():
+    """サマリーを作成"""
+    host = get_host()
+    resp = requests.post(f"http://{host}:{PORT}/summary")
+    click.echo(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+
+
+@cli.command()
+@click.argument("message", nargs=-1, required=True)
+def chat(message: tuple[str, ...]):
+    """チャットメッセージを送信"""
+    host = get_host()
+    content = " ".join(message)
+    payload = {
+        "use_memory": True,
+        "detect_sleep": False,
+        "max_loop": 5,
+        "messages": [{"role": "user", "content": content}],
+    }
+    resp = requests.post(f"http://{host}:{PORT}/chat", json=payload)
+    click.echo(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    cli()
