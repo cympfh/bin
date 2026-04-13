@@ -1,354 +1,349 @@
 ---
 name: mybin
 description: |
-  ~/bin/ is a personal utility script collection in PATH containing 65+ executable scripts (Python, Bash, Ruby).
-  These are production-ready command-line tools covering AI/LLM integration, system utilities, media processing,
-  web/data manipulation, and development tools. All scripts support standard Unix patterns (pipes, stdin/stdout),
-  have --help flags, and can be freely used in any workflow. This file defines when and how Claude Code should
-  proactively use these tools to enhance productivity.
+  ~/bin/ は PATH に通された個人用ユーティリティスクリプト集（65+個, Python/Bash/Ruby）。
+  AI/LLM連携、システムユーティリティ、メディア処理、Web/データ操作、開発ツールをカバー。
+  全スクリプトは Unix パイプ対応（stdin/stdout）、詳細な使い方は各コマンドの --help で確認できる。
 ---
+
+> **Note:** 各コマンドの詳細な使い方・オプションは `コマンド名 --help` で確認できます。
 
 ## AI/LLM Tools
 
 ### codegen
 
-**When to use:** When you need to generate code from natural language descriptions or complete code with placeholders.
+LLMでコード生成・`{{ }}` プレースホルダー補完。xAI/Gemini/OpenAI/Anthropic対応。
 
-**Description:** LLM-powered code generation and placeholder completion tool using litellm (supports xAI, Gemini, OpenAI, Anthropic).
-
-**Usage:**
-- `codegen chat "write a function to calculate fibonacci"` - Generate code from natural language
-- `echo 'def fib(n): {{ implement }}' | codegen complete` - Complete `{{ }}` placeholders
-- `codegen chat -p gemini -m gemini-2.0-flash "..."` - Use specific provider/model
-
-**Subcommands:**
-- `chat`: Generate code from natural language description
-- `complete`: Fill in `{{ }}` placeholders in code
+```bash
+codegen chat "フィボナッチ数列を計算する関数を書いて"
+echo 'def fib(n): {{ implement }}' | codegen complete
+codegen chat -p gemini -m gemini-2.0-flash "..."
+```
 
 ### translate
 
-**When to use:** When you need to translate text between languages, especially when working with multilingual content.
+多言語翻訳（自動言語検出）。中国語の場合はピンイン付き。
 
-**Description:** Multi-language translation tool with automatic language detection. For Chinese text, provides pinyin annotations.
-
-**Usage:**
-- `echo "Hello world" | translate` - Auto-detect and translate
-- `translate -t ja "How are you?"` - Translate to Japanese
-- `translate -f en -t zh "Hello"` - Translate from English to Chinese (with pinyin)
+```bash
+echo "Hello world" | translate
+translate -t ja "How are you?"
+translate -f en -t zh "Hello"
+```
 
 ### zhcomp
 
-**When to use:** When working with Chinese text that needs correction, pinyin conversion, or translation to Japanese.
+中国語テキスト修正・ピンイン変換・日本語翻訳。
 
-**Description:** Chinese text processing tool for corrections, pinyin conversion, and Japanese translation.
+```bash
+echo "中国語テキスト" | zhcomp
+zhcomp --pinyin "你好"
+zhcomp --ja "中文"
+```
 
-**Usage:**
-- `echo "中国語テキスト" | zhcomp` - Correct Chinese text
-- `zhcomp --pinyin "你好"` - Add pinyin annotations
-- `zhcomp --ja "中文"` - Translate to Japanese
+### pinyin
+
+中国語テキストをピンインに変換する。
+
+```bash
+pinyin "中心"
+echo "中心" | pinyin
+```
 
 ### ocr
 
-**When to use:** When you need to extract text from images.
+画像ファイルからテキストを抽出する。
 
-**Description:** OCR (Optical Character Recognition) tool to extract text from image files.
+```bash
+ocr screenshot.png
+ocr image.jpg
+```
 
-**Usage:**
-- `ocr image.png` - Extract text from image
-- `ocr screenshot.jpg` - Process screenshot
+### igrok
+
+xAI Grok API を使った画像生成・編集 CLI。テキストプロンプトから画像を生成し、既存画像を編集できる。
+
+```bash
+igrok '犬のイラストを描いて' -o dog.png
+igrok '猫に変換' -i dog.png -o cat_edited.png
+```
+
+### eliza
+
+Claude API を使ったチャット CLI。会話履歴管理とサマリー作成機能付き。
+
+```bash
+eliza chat "こんにちは、今日の天気は？"
+eliza summary
+```
+
+### youtube-search
+
+YouTube Data API v3 を使った動画検索（結果を5分キャッシュ）。
+
+```bash
+youtube-search "猫 かわいい"
+youtube-search -n 10 --order date "Python tutorial"
+youtube-search --json "keyword"
+```
 
 ## System Utilities
 
 ### withcache
 
-**When to use:** When you need to cache the results of expensive commands to avoid repeated execution.
+コマンド結果を TTL 付きでキャッシュし、再実行を防ぐ。
 
-**Description:** Command result caching with TTL support. Caches command output and reuses it within the TTL period.
-
-**Usage:**
-- `withcache --ttl 3600 "slow-command"` - Cache for 1 hour
-- `withcache "curl https://api.example.com"` - Cache API response
+```bash
+withcache --ttl 3600 "curl https://api.example.com/data"
+withcache "slow-command"
+```
 
 ### weasel
 
-**When to use:** When you need to watch files for changes and execute commands automatically, or run commands at specific times.
+ファイル監視＆時間ベースのコマンド自動実行。
 
-**Description:** File watcher and time-based command executor using watchgod.
-
-**Usage:**
-- `weasel --watch src/ --exec "make test"` - Watch directory and run tests
-- `weasel --at "14:00" --exec "backup.sh"` - Execute at specific time
+```bash
+weasel --watch src/ --exec "make test"
+weasel --at "14:00" --exec "backup.sh"
+```
 
 ### clip
 
-**When to use:** When you need to interact with the system clipboard across different platforms.
+クロスプラットフォーム（Linux/WSL/macOS）クリップボード操作。
 
-**Description:** Cross-platform clipboard operations (Linux/WSL/macOS). Automatically detects and uses xsel, pbcopy, or PowerShell.
-
-**Usage:**
-- `echo "text" | clip` - Copy to clipboard
-- `clip` - Paste from clipboard
-
-### progressbar
-
-**When to use:** When you need to display a progress bar for long-running operations.
-
-**Description:** Display progress bars in terminal.
-
-**Usage:**
-- `progressbar --total 100 --current 50` - Show progress bar
-- `for i in {1..100}; do progressbar --total 100 --current $i; sleep 0.1; done` - Animated progress
+```bash
+echo "text" | clip    # コピー
+clip                  # ペースト
+```
 
 ### notify
 
-**When to use:** When you need to send system notifications or alerts.
+デスクトップ通知を送る。
 
-**Description:** System notification tool for desktop alerts.
+```bash
+notify "タスク完了"
+long-task && notify "Done!"
+```
 
-**Usage:**
-- `notify "Task completed"` - Send notification
-- `long-task && notify "Done!"` - Notify after command completes
+### progressbar
+
+ターミナルにプログレスバーを表示する。
+
+```bash
+progressbar --total 100 --current 50
+```
+
+### gen-password
+
+ランダムなパスワードを生成する。
+
+```bash
+gen-password
+```
+
+### name
+
+形容詞＋名詞のランダムな名前を生成する。
+
+```bash
+name
+name --no-adj
+```
+
+### run
+
+任意のスクリプト/ソースコードファイルを直接実行する（shebang不要）。
+
+```bash
+run script.py
+run code.rb
+```
+
+### usdjpy
+
+現在の USD/JPY 為替レートを表示する（ライブ取得）。
+
+```bash
+usdjpy
+```
+
+### switchbot
+
+SwitchBot API を使ってスマートホームデバイスを操作する。
+
+```bash
+switchbot devices               # デバイス一覧
+switchbot status <device_id>    # デバイス状態取得
+switchbot light <device_id> on  # ライトをON
+switchbot aircon <device_id>    # エアコン操作
+switchbot scene <scene_id>      # シーン実行
+```
 
 ## Media & Graphics
 
 ### imagediff
 
-**When to use:** When you need to compare two images and detect differences.
+2枚の画像の差分を検出・比較する。
 
-**Description:** Image comparison tool to find differences between images.
-
-**Usage:**
-- `imagediff image1.png image2.png` - Compare images
-- `imagediff --output diff.png before.png after.png` - Save difference image
+```bash
+imagediff before.png after.png
+imagediff --output diff.png image1.png image2.png
+```
 
 ### imagehash
 
-**When to use:** When you need to generate perceptual hashes for images (for deduplication or similarity detection).
+画像の知覚ハッシュを生成する（重複検出・類似判定に使用）。
 
-**Description:** Generate perceptual hashes for images.
-
-**Usage:**
-- `imagehash image.png` - Generate hash
-- `imagehash *.jpg` - Hash multiple images
-
-### imagick
-
-**When to use:** When you need to perform ImageMagick operations with AI assistance or QR code generation.
-
-**Description:** ImageMagick wrapper with AI subcommand for intelligent image operations.
-
-**Usage:**
-- `imagick ai "resize to 800x600"` - AI-powered image operations
-- `imagick convert input.png output.jpg` - Standard ImageMagick operations
+```bash
+imagehash image.png
+imagehash *.jpg
+```
 
 ### pixelart
 
-**When to use:** When working with pixel art images.
+ピクセルアート画像を処理する。
 
-**Description:** Pixel art processing tool.
-
-**Usage:**
-- `pixelart image.png` - Process pixel art
+```bash
+pixelart image.png
+```
 
 ### amesh
 
-**When to use:** When you need to fetch weather radar images for Japan.
+amesh.jp から最新の天気レーダー画像を取得する。
 
-**Description:** Fetch weather radar images from amesh.jp.
-
-**Usage:**
-- `amesh` - Download latest radar image
-- `amesh --save weather.png` - Save to specific file
+```bash
+amesh
+```
 
 ## Web & Data Processing
 
 ### tenki
 
-**When to use:** When you need weather information.
+OpenWeatherMap API を使って天気情報を取得する。
 
-**Description:** Weather information tool using OpenWeatherMap API.
-
-**Usage:**
-- `tenki` - Get current weather
-- `tenki Tokyo` - Weather for specific location
+```bash
+tenki
+tenki Tokyo
+```
 
 ### html-title
 
-**When to use:** When you need to extract the title from HTML content or URLs.
+HTMLコンテンツや URL から title タグを抽出する。
 
-**Description:** Extract HTML title tags.
-
-**Usage:**
-- `echo "<html><head><title>Test</title></head></html>" | html-title` - Extract title
-- `html-title https://example.com` - Get title from URL
+```bash
+echo "<html><head><title>Test</title></head></html>" | html-title
+```
 
 ### html-encode
 
-**When to use:** When you need to HTML-encode or decode text.
+HTML エンティティのエンコード/デコードを行う。
 
-**Description:** HTML encoding/decoding utility.
+```bash
+echo "<div>" | html-encode
+html-encode --decode "&lt;div&gt;"
+```
 
-**Usage:**
-- `echo "<div>" | html-encode` - Encode HTML entities
-- `html-encode --decode "&lt;div&gt;"` - Decode HTML entities
+### json2yaml / yaml2json / toml2json
 
-### json2yaml
+データフォーマットを相互変換する。
 
-**When to use:** When you need to convert JSON to YAML format.
-
-**Description:** Convert JSON to YAML.
-
-**Usage:**
-- `echo '{"key": "value"}' | json2yaml` - Convert JSON to YAML
-- `json2yaml data.json` - Convert file
-
-### yaml2json
-
-**When to use:** When you need to convert YAML to JSON format.
-
-**Description:** Convert YAML to JSON.
-
-**Usage:**
-- `echo 'key: value' | yaml2json` - Convert YAML to JSON
-- `yaml2json config.yaml` - Convert file
-
-### toml2json
-
-**When to use:** When you need to convert TOML to JSON format.
-
-**Description:** Convert TOML to JSON.
-
-**Usage:**
-- `toml2json pyproject.toml` - Convert TOML file to JSON
-- `echo '[section]\nkey = "value"' | toml2json` - Convert TOML to JSON
+```bash
+echo '{"key": "value"}' | json2yaml
+echo 'key: value' | yaml2json
+toml2json pyproject.toml
+```
 
 ### uri-encode
 
-**When to use:** When you need to URL-encode or decode strings.
+URL エンコード/デコードを行う。
 
-**Description:** URL encoding/decoding utility.
-
-**Usage:**
-- `echo "hello world" | uri-encode` - Encode URL
-- `uri-encode --decode "hello%20world"` - Decode URL
+```bash
+echo "hello world" | uri-encode
+uri-encode --decode "hello%20world"
+```
 
 ### http-status
 
-**When to use:** When you need to look up HTTP status code meanings.
+HTTP ステータスコードの意味を調べる。
 
-**Description:** HTTP status code lookup with descriptions.
-
-**Usage:**
-- `http-status 404` - Get description of status code
-- `http-status 200` - Explain status code
+```bash
+http-status 404
+http-status 200
+```
 
 ### toqr
 
-**When to use:** When you need to generate QR codes from text or URLs.
+テキストや URL から QR コードを生成する。
 
-**Description:** Generate QR codes.
+```bash
+echo "https://example.com" | toqr
+toqr --output qr.png "text"
+```
 
-**Usage:**
-- `echo "https://example.com" | toqr` - Generate QR code
-- `toqr --output qr.png "text"` - Save QR code to file
+### doujin-search
+
+同人誌を検索する。
+
+```bash
+doujin-search "keyword"
+doujin-search -v "keyword"
+```
 
 ## Time & Date Tools
 
 ### jdate
 
-**When to use:** When you need Japanese calendar information, sunrise/sunset times.
+日本のカレンダー情報・日の出日の入り時刻を計算する。
 
-**Description:** Japanese calendar and astronomical calculations (sunrise, sunset).
-
-**Usage:**
-- `jdate` - Show today's info
-- `jdate 2024-01-01` - Info for specific date
-- `jdate --sunrise` - Get sunrise time
-- `jdate --sunset` - Get sunset time
+```bash
+jdate
+jdate 2024-01-01
+```
 
 ### timer
 
-**When to use:** When you need to measure time or set a countdown timer.
+カウントダウンタイマー・ストップウォッチ。
 
-**Description:** Time measurement and countdown tool.
-
-**Usage:**
-- `timer 60` - 60-second countdown
-- `timer --stopwatch` - Start stopwatch
+```bash
+timer 60
+timer --stopwatch
+```
 
 ### calendar
 
-**When to use:** When you need an enhanced calendar view with additional features.
+拡張カレンダー表示。
 
-**Description:** Enhanced calendar with extended functionality.
-
-**Usage:**
-- `calendar` - Show current month
-- `calendar 2024 12` - Show specific month
+```bash
+calendar
+calendar 2024 12
+```
 
 ## Development & Text Processing
 
 ### jinja2
 
-**When to use:** When you need to process Jinja2 templates.
+Jinja2 テンプレートをコマンドラインで処理する。
 
-**Description:** Jinja2 template processing from command line.
-
-**Usage:**
-- `echo "Hello {{ name }}" | jinja2 --var name=World` - Process template
-- `jinja2 template.j2 --var key=value` - Process template file
+```bash
+echo "Hello {{ name }}" | jinja2 --var name=World
+jinja2 template.j2 --var key=value
+```
 
 ### filename
 
-**When to use:** When you need to manipulate or sanitize filenames.
+ファイル名の操作・サニタイズを行う。
 
-**Description:** Filename manipulation utility.
-
-**Usage:**
-- `echo "My File.txt" | filename --sanitize` - Sanitize filename
-- `filename --normalize "file name.doc"` - Normalize filename
+```bash
+echo "My File.txt" | filename --sanitize
+```
 
 ## Configuration
 
 ### llm-config
 
-**When to use:** When you need to configure LLM settings for codegen, translate, zhcomp, and other AI tools.
+codegen/translate/zhcomp などの AI ツール向け LLM 設定を管理する。
 
-**Description:** LLM configuration management for AI-powered tools.
-
-**Usage:**
-- `llm-config --list` - List current configuration
-- `llm-config --set provider=gemini` - Set default provider
-- `llm-config --set model=grok-4-fast-reasoning` - Set default model
-
-## General Guidelines
-
-### Using These Tools
-
-Claude Code should proactively use these tools when:
-
-1. **AI/LLM Tools**: When generating code, translating text, or processing language content
-2. **System Utilities**: When caching is beneficial, watching files, or interacting with clipboard
-3. **Media & Graphics**: When processing, comparing, or analyzing images
-4. **Web & Data**: When converting data formats or fetching web content
-5. **Time & Date**: When calendar or time calculations are needed
-6. **Development**: When template processing or filename manipulation is required
-
-### Integration Patterns
-
-- Most tools support pipe input: `echo "data" | tool`
-- Most tools have `-h` or `--help` flags for detailed usage
-- Tools are designed to work in shell pipelines
-- Error messages are sent to stderr, output to stdout
-
-### Environment Requirements
-
-- Python tools require the `.venv` environment (already set up)
-- LLM tools require appropriate API keys in environment variables
-- All tools are in PATH and can be called directly
-
-### Performance Considerations
-
-- Use `withcache` for expensive operations
-- LLM tools support provider/model selection for speed/quality tradeoffs
-- Prefer specific tools over general-purpose commands when available
+```bash
+llm-config --list
+llm-config --set provider=gemini
+llm-config --set model=grok-4-fast-reasoning
+```
