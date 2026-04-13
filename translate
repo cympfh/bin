@@ -72,8 +72,36 @@ JSON の前後に余計なテキストを出力しないでください.
     "pinyin": "${{中国語の場合のみ, 普通話での標準的な拼音}}"
 }}
 
+---
+
+"困死宝宝了"
+
+{{
+    "model": "{self.model}",
+    "detected_source_language": "ZH",
+    "target_language": "JA",
+    "text": "眠くてたまらない",
+    "pinyin": "kùn sǐ bǎo bǎo le"
+}}
+
+---
+
+"What time is it now?"
+
+{{
+    "model": "{self.model}",
+    "detected_source_language": "EN",
+    "target_language": "JA",
+    "text": "今何時ですか？",
+    "pinyin": null
+}}
+
+---
+
 では翻訳したい文章を次に与えます.
 あなたはその言語の先生になったつもりで, より良い翻訳結果を一つ JSON 形式で示してください.
+
+---
 """
         messages = [
             {
