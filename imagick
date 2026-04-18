@@ -70,12 +70,22 @@ ai_subcommand() {
   echo "Generating ImageMagick command..." >&2
   MAGICK_CMD=$(echo "ImageMagick の magick コマンドを1つ生成してください。
 
+---
+
+SAMPLE
+
+---
+
 入力ファイル: $IMAGE
 出力ファイル: $OUTPUT
 要求: $PROMPT
 
 magick コマンドのみを1行で出力してください。説明やコードブロックは不要です。
-例: magick input.png -fuzz 10% -transparent green output.png" | codegen chat -L bash -q)
+例: 「緑色を透過したい」
+magick input.png -fuzz 10% -transparent green output.png
+
+例: 「画像の背景を透過したい」
+magick image.jpg -alpha set -background none -channel RGBA -fill '#00000000' -fuzz 5% -draw 'alpha 1,1 floodfill' output.png" | codegen chat -L 'bash/magick' -q)
 
   if [ $? -ne 0 ]; then
     echo "Error: Failed to generate command" >&2
