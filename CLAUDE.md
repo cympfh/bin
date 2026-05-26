@@ -116,7 +116,7 @@ ruff check
 全てのLLMツールは `litellm` を使用し、複数プロバイダー対応（xAI, Gemini, OpenAI, Anthropic）:
 
 - `codegen`: コード生成・プレースホルダー補完
-  - デフォルト: xai/grok-4-fast-reasoning
+  - デフォルト: xai/grok-build-0.1（コード特化モデル）
   - `chat` サブコマンド: 自然言語からコード生成
   - `complete` サブコマンド: `{{ }}` プレースホルダー補完
 - `zhcomp`: 中国語テキスト修正・ピンイン変換

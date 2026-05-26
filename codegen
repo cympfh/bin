@@ -9,10 +9,10 @@ import watchgod
 from litellm import completion
 from pydantic import BaseModel, Field
 
-# reasoning モデルをデフォルトに
+# xAI Grok 4.3 (May 2026 migration)
 LLM_CONFIG = json.loads(
     subprocess.run(
-        ["llm-config", "xai", "grok-code-fast"], capture_output=True
+        ["llm-config", "xai", "grok-build-0.1"], capture_output=True
     ).stdout.decode("utf-8")
 )
 
@@ -64,14 +64,12 @@ class LLM:
             },
         ]
         result = completion(
-            model=self.model,
-            messages=messages,
-            response_format=CodeOutput,
+            model=self.model, messages=messages, response_format=CodeOutput
         )
-        content: str = result.choices[0].message.content  # type: ignore
+        content: str = result.choices[0].message.content
         return CodeOutput.model_validate_json(content)
 
-    def complete(self, language: str, code: str, nosy: str) -> CodeOutput:
+    def complete(self, language: str, code: str, nosy: bool) -> CodeOutput:
         """与えたプログラムコード片のうちプレースホルダーを補完してもらう
 
         {{ ... }} が補完対象
@@ -168,8 +166,13 @@ Note:
             model=self.model,
             messages=messages,
             response_format=CodeOutput,
+            **(
+                {"extra_body": {"reasoning_effort": LLM_CONFIG.get("reasoning_effort")}}
+                if LLM_CONFIG.get("reasoning_effort")
+                else {}
+            ),
         )
-        content: str = result.choices[0].message.content  # type: ignore
+        content: str = result.choices[0].message.content
         return CodeOutput.model_validate_json(content)
 
 

@@ -341,9 +341,13 @@ echo "My File.txt" | filename --sanitize
 ### llm-config
 
 codegen/translate/zhcomp などの AI ツール向け LLM 設定を管理する。
+プロバイダー・モデルを位置引数で指定し、JSON を stdout に出力する。
 
 ```bash
-llm-config --list
-llm-config --set provider=gemini
-llm-config --set model=grok-4-fast-reasoning
+llm-config                          # 環境変数から自動選択
+llm-config xai                      # xAI (grok-4.3, reasoning_effort=low)
+llm-config xai grok-4.3 -r high    # モデル・reasoning effort 指定
+llm-config gemini                   # Google Gemini
+llm-config openai                   # OpenAI
+llm-config anthropic                # Anthropic
 ```

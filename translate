@@ -9,7 +9,9 @@ from litellm import completion
 from pydantic import BaseModel, Field
 
 LLM_CONFIG = json.loads(
-    subprocess.run("llm-config", capture_output=True).stdout.decode("utf-8")
+    subprocess.run(
+        ["llm-config", "xai", "-r", "none"], capture_output=True
+    ).stdout.decode("utf-8")
 )
 
 LANGS = {
@@ -23,6 +25,9 @@ LANGS = {
 
 class Response(BaseModel):
     model: str = Field(description="Model name used for translation")
+    reasoning_effort: str | None = Field(
+        description="Reasoning effort level used for the response"
+    )
     detected_source_language: str = Field(
         description="Detected source language code (e.g., en, ja, zh)"
     )
@@ -34,8 +39,9 @@ class Response(BaseModel):
 
 
 class LLM:
-    def __init__(self, provider: str, model: str):
+    def __init__(self, provider: str, model: str, reasoning_effort: str | None = None):
         self.model = f"{provider}/{model}"
+        self.reasoning_effort = reasoning_effort
 
     def run(
         self, text: str, source_lang: str = "unknown", target_lang: str = "ja"
@@ -66,6 +72,7 @@ JSON の前後に余計なテキストを出力しないでください.
 
 {{
     "model": "{self.model}",
+    "reasoning_effort": "{self.reasoning_effort}",
     "detected_source_language": "${{翻訳元の言語, 例えば EN や JA}}",
     "target_language": "{target_lang.upper()}",
     "text": "${{翻訳結果}}",
@@ -117,12 +124,16 @@ JSON の前後に余計なテキストを出力しないでください.
 """,
             },
         ]
+        extra = {}
+        if self.reasoning_effort is not None:
+            extra["reasoning_effort"] = self.reasoning_effort
         result = completion(
             model=self.model,
             messages=messages,
             response_format=Response,
+            **extra,
         )
-        content: str = result.choices[0].message.content  # type: ignore
+        content: str = result.choices[0].message.content
         return Response.model_validate_json(content)
 
 
@@ -141,12 +152,20 @@ JSON の前後に余計なテキストを出力しないでください.
     default=LLM_CONFIG["model"],
     show_default=True,
 )
+@click.option(
+    "--reasoning-effort",
+    "-r",
+    type=click.Choice([None, "none", "low", "medium", "high"]),
+    default=LLM_CONFIG.get("reasoning_effort"),
+    show_default=True,
+)
 @click.option("--source", "-s", type=str, default="unknown", help="source language")
 @click.option("--target", "-t", type=str, default="ja", help="target language")
 @click.argument("text", type=str, required=False)
 def main(
     provider: str,
     model: str,
+    reasoning_effort: str | None,
     source: str,
     target: str,
     text: str,
@@ -157,7 +176,9 @@ def main(
     assert source in LANGS, f"Supported langs: {LANGS}"
     assert target in LANGS, f"Supported langs: {LANGS}"
 
-    result = LLM(provider, model).run(text, source_lang=source, target_lang=target)
+    result = LLM(provider, model, reasoning_effort).run(
+        text, source_lang=source, target_lang=target
+    )
     print(result.model_dump_json())
 
 

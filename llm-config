@@ -9,8 +9,29 @@
 # API KEYs should be set in environment variables:
 #   https://docs.litellm.ai/docs/providers
 
-PREFERRED_LLM_PROVIDER="$1"
-PREFERRED_LLM_MODEL="$2"
+PREFERRED_LLM_PROVIDER=
+PREFERRED_LLM_MODEL=
+LLM_REASONING_EFFORT=
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --reasoning-effort | -r )
+            LLM_REASONING_EFFORT="$2"
+            shift 2
+            ;;
+        *)
+            if [ -z "$PREFERRED_LLM_PROVIDER" ]; then
+                PREFERRED_LLM_PROVIDER="$1"
+            elif [ -z "$PREFERRED_LLM_MODEL" ]; then
+                PREFERRED_LLM_MODEL="$1"
+            else
+                echo "Unknown argument: $1"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
 
 LLM_PROVIDER=
 LLM_MODEL=
@@ -19,7 +40,9 @@ LLM_API_KEY=
 read_xai() {
     LLM_PROVIDER="xai"
     LLM_MODEL="${PREFERRED_LLM_MODEL:-$XAI_MODEL}"
-    LLM_MODEL="${LLM_MODEL:-grok-4.20-non-reasoning}"
+    LLM_MODEL="${LLM_MODEL:-grok-4.3}"
+    # grok-4.3 uses reasoning_effort: none/low/medium/high (default: low for balance)
+    LLM_REASONING_EFFORT="${LLM_REASONING_EFFORT:-low}"
     LLM_API_KEY="$XAI_API_KEY"
 }
 
@@ -69,4 +92,5 @@ echo '{}' | jq -c \
     --arg provider "$LLM_PROVIDER" \
     --arg model "$LLM_MODEL" \
     --arg api_key "$LLM_API_KEY" \
-    '. + {provider: $provider, model: $model, api_key: $api_key}'
+    --arg reasoning_effort "${LLM_REASONING_EFFORT}" \
+    '. + {provider: $provider, model: $model, api_key: $api_key, reasoning_effort: $reasoning_effort}'
