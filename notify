@@ -22,6 +22,25 @@ nopackage() {
     exit 1
 }
 
+is_wsl() {
+    grep -qi microsoft /proc/version 2>/dev/null
+}
+
+install_wsl_notify_send() {
+    local install_dir="$HOME/.local/bin"
+    local zip_url="https://github.com/stuartleeks/wsl-notify-send/releases/download/v0.1.871612270/wsl-notify-send_windows_386.zip"
+    local tmp_zip="/tmp/wsl-notify-send.zip"
+    mkdir -p "$install_dir"
+    echo "Installing wsl-notify-send..."
+    if command -v wget >/dev/null; then
+        wget -q -O "$tmp_zip" "$zip_url"
+    else
+        curl -sL -o "$tmp_zip" "$zip_url"
+    fi
+    unzip -o -j "$tmp_zip" wsl-notify-send.exe -d "$install_dir"
+    rm -f "$tmp_zip"
+}
+
 # args
 while [ -n "$1" ]; do
     case $1 in
@@ -54,6 +73,16 @@ done
 # exec notify
 if command -v terminal-notifier >/dev/null; then
     terminal-notifier -title "${TITLE}" -subtitle "${SUBTITLE}" -message "${MESSAGE}" -appIcon "${ICON}"
+elif is_wsl; then
+    if ! command -v wsl-notify-send.exe >/dev/null; then
+        install_wsl_notify_send
+    fi
+    BODY="${MESSAGE}"
+    if [ -n "${SUBTITLE}" ]; then
+        BODY="${SUBTITLE}: ${MESSAGE}"
+    fi
+    HEADER="${TITLE:-notification}"
+    wsl-notify-send.exe --category "${HEADER}" "${BODY}"
 elif command -v notify-send >/dev/null; then
     if [ -n "${SUBTITLE}" ]; then
         TITLE="${TITLE} - ${SUBTITLE}"
