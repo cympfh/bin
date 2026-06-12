@@ -3,13 +3,13 @@
 TITLE=
 SUBTITLE=
 MESSAGE=
-ICON=$HOME/bin/img/osaka.jpg
+ICON=$HOME/bin/img/osaka_1_4.jpg
 SOUND=0
 
 usage() {
   cat << USAGE
 NAME
-    notify -- my wrapper for notify-send (ubuntu), terminal-notifier (OSX)
+    notify -- my wrapper for notify-send (ubuntu), terminal-notifier (OSX), BurntToast (WSL)
 
 SYNOPSIS
     notify [ --title <string> ] [ --subtitle <string> ] [ --icon <path or URL> ] [ --sound ] <string>
@@ -26,19 +26,27 @@ is_wsl() {
     grep -qi microsoft /proc/version 2>/dev/null
 }
 
-install_wsl_notify_send() {
-    local install_dir="$HOME/.local/bin"
-    local zip_url="https://github.com/stuartleeks/wsl-notify-send/releases/download/v0.1.871612270/wsl-notify-send_windows_386.zip"
-    local tmp_zip="/tmp/wsl-notify-send.zip"
-    mkdir -p "$install_dir"
-    echo "Installing wsl-notify-send..."
-    if command -v wget >/dev/null; then
-        wget -q -O "$tmp_zip" "$zip_url"
-    else
-        curl -sL -o "$tmp_zip" "$zip_url"
+burnttoast_notify() {
+    local header="$1"
+    local body="$2"
+    local icon="$3"
+    # Escape single quotes for PowerShell single-quoted strings
+    header="${header//\'/\'\'}"
+    body="${body//\'/\'\'}"
+    local ps_cmd="Import-Module BurntToast -ErrorAction Stop; New-BurntToastNotification -Text '${header}', '${body}'"
+    if [ -n "${icon}" ] && [ -f "${icon}" ]; then
+        local win_icon
+        win_icon=$(wslpath -w "${icon}" 2>/dev/null)
+        if [ -n "${win_icon}" ]; then
+            win_icon="${win_icon//\'/\'\'}"
+            ps_cmd="Import-Module BurntToast -ErrorAction Stop; New-BurntToastNotification -Text '${header}', '${body}' -AppLogo '${win_icon}'"
+        fi
     fi
-    unzip -o -j "$tmp_zip" wsl-notify-send.exe -d "$install_dir"
-    rm -f "$tmp_zip"
+    if ! powershell.exe -Command "${ps_cmd}" 2>/dev/null; then
+        echo "Error: BurntToast not found." >&2
+        echo "Install with: powershell.exe -Command \"Install-Module BurntToast -Force\"" >&2
+        exit 1
+    fi
 }
 
 # args
@@ -74,15 +82,12 @@ done
 if command -v terminal-notifier >/dev/null; then
     terminal-notifier -title "${TITLE}" -subtitle "${SUBTITLE}" -message "${MESSAGE}" -appIcon "${ICON}"
 elif is_wsl; then
-    if ! command -v wsl-notify-send.exe >/dev/null; then
-        install_wsl_notify_send
-    fi
     BODY="${MESSAGE}"
     if [ -n "${SUBTITLE}" ]; then
         BODY="${SUBTITLE}: ${MESSAGE}"
     fi
     HEADER="${TITLE:-notification}"
-    wsl-notify-send.exe --category "${HEADER}" "${BODY}"
+    burnttoast_notify "${HEADER}" "${BODY}" "${ICON}"
 elif command -v notify-send >/dev/null; then
     if [ -n "${SUBTITLE}" ]; then
         TITLE="${TITLE} - ${SUBTITLE}"
