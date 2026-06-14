@@ -51,8 +51,7 @@ def chat(message: tuple[str, ...]):
     host = get_host()
     content = " ".join(message)
     payload = {
-        "use_memory": True,
-        "detect_sleep": False,
+        "context": "cli",
         "max_loop": 5,
         "messages": [{"role": "user", "content": content}],
     }
