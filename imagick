@@ -15,6 +15,7 @@ subcommand
   level80         Adjust image levels to 80%
   x2              Resize image to 2x
   x4              Resize image to 4x
+  x0.5            Resize image to 0.5x
   ai -p <prompt>  Generate ImageMagick command using AI based on prompt
 EOM
 }
@@ -125,6 +126,9 @@ case "$SUBCOMMAND" in
     ;;
   x4 )
     magick "$IMAGE" -resize 400% "$OUTPUT"
+    ;;
+  x0.5 )
+    magick "$IMAGE" -resize 50% "$OUTPUT"
     ;;
   ai )
     ai_subcommand
