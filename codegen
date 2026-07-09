@@ -166,11 +166,6 @@ Note:
             model=self.model,
             messages=messages,
             response_format=CodeOutput,
-            **(
-                {"extra_body": {"reasoning_effort": LLM_CONFIG.get("reasoning_effort")}}
-                if LLM_CONFIG.get("reasoning_effort")
-                else {}
-            ),
         )
         content: str = result.choices[0].message.content
         return CodeOutput.model_validate_json(content)
