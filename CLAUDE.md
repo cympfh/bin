@@ -47,7 +47,8 @@ ruff check
 
 - `codegen` - LLMによるコード生成・プレースホルダー補完（litellm使用、複数プロバイダー対応）
 - `zhcomp` - 中国語テキスト修正・ピンイン変換（OpenAI API使用）
-- `translate` - 多言語翻訳（OpenAI API使用）
+- `translate` - 多言語翻訳（xai_sdk使用）
+- `igrok` - Grokによる画像生成・編集（xai_sdk使用、grok-imagine-imageモデル）
 - `codegpt`, `papergpt` - ChatGPT系ツール
 - `ocr` - OCR機能
 
@@ -113,7 +114,7 @@ ruff check
 
 #### LLM/API使用ツール
 
-全てのLLMツールは `litellm` を使用し、複数プロバイダー対応（xAI, Gemini, OpenAI, Anthropic）:
+大半のLLMツールは `litellm` を使用し、複数プロバイダー対応（xAI, Gemini, OpenAI, Anthropic）:
 
 - `codegen`: コード生成・プレースホルダー補完
   - デフォルト: xai/grok-build-0.1（コード特化モデル）
@@ -121,13 +122,19 @@ ruff check
   - `complete` サブコマンド: `{{ }}` プレースホルダー補完
 - `zhcomp`: 中国語テキスト修正・ピンイン変換
   - 簡体字修正、ピンイン出力、日本語翻訳
-- `translate`: 多言語翻訳
-  - 自動言語検出、中国語の場合はピンイン付き
 
-共通仕様:
+共通仕様（litellm使用ツール）:
 - `llm-config` コマンドで設定管理
 - 構造化出力（Pydantic BaseModel + `response_format`）
 - `-p/--provider` と `-m/--model` オプションでモデル選択可能
+
+`translate` と `igrok` は例外で `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環境変数で認証）:
+- `translate`: 多言語翻訳、自動言語検出、中国語の場合はピンイン付き
+  - `-m/--model`（デフォルト: grok-4.3）と `-r/--reasoning-effort`（none/low/high）のみ指定可能、`-p/--provider` オプションはない
+- `igrok`: `client.image.sample()` で画像生成・編集（モデル固定: grok-imagine-image）
+  - `-i/--input` 指定時は画像編集モード（Data URI変換して送信）、未指定時は画像生成モード
+  - `-o/--output` 必須、`-a/--aspect-ratio`（1:1/3:4/4:3/9:16/16:9、デフォルト1:1、生成時のみ）
+  - レスポンスの画像URLをダウンロードして保存
 
 ## 使用方法
 
