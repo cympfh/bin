@@ -45,12 +45,13 @@ ruff check
 
 #### AI/NLP関連
 
-- `codegen` - LLMによるコード生成・プレースホルダー補完（litellm使用、複数プロバイダー対応）
-- `zhcomp` - 中国語テキスト修正・ピンイン変換（OpenAI API使用）
+- `codegen` - LLMによるコード生成・プレースホルダー補完（xai_sdk使用）
+- `zhcomp` - 中国語テキスト修正・ピンイン変換（xai_sdk使用）
 - `translate` - 多言語翻訳（xai_sdk使用）
 - `igrok` - Grokによる画像生成・編集（xai_sdk使用、grok-imagine-imageモデル）
 - `codegpt`, `papergpt` - ChatGPT系ツール
-- `ocr` - OCR機能
+- `ocr` - 画像のOCR・内容説明（xai_sdk使用）
+- `aidoc` - Markdown を HTML ページに変換（xai_sdk使用）
 
 #### システム・ユーティリティ
 
@@ -114,23 +115,28 @@ ruff check
 
 #### LLM/API使用ツール
 
-大半のLLMツールは `litellm` を使用し、複数プロバイダー対応（xAI, Gemini, OpenAI, Anthropic）:
+LLMツールは全て `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環境変数で認証）。
+`litellm` と `llm-config` は 2026-08 に廃止した（実際に使うのが xAI だけだったため）。
 
-- `codegen`: コード生成・プレースホルダー補完
-  - デフォルト: xai/grok-build-0.1（コード特化モデル）
-  - `chat` サブコマンド: 自然言語からコード生成
-  - `complete` サブコマンド: `{{ }}` プレースホルダー補完
-- `zhcomp`: 中国語テキスト修正・ピンイン変換
-  - 簡体字修正、ピンイン出力、日本語翻訳
+共通実装パターン（`aidoc`, `codegen`, `ocr`, `translate`, `zhcomp`）:
+- `Client(api_key=os.environ.get("XAI_API_KEY"))` でクライアント生成
+- `client.chat.create(model=..., reasoning_effort=...)` → `session.append(system(...)/user(...))` → `session.parse(Model)`
+  で構造化出力（Pydantic BaseModel）を得る
+- モジュール定数 `DEFAULT_LLM_MODEL = "grok-4.5"` / `DEFAULT_LLM_REASONING_EFFORT = "low"`
+- オプションは `-m/--model` と `-r/--reasoning-effort`（low/medium/high）。`-p/--provider` は存在しない
+  - grok-4.5 は reasoning を無効化できない（`none` 不可、API既定は high）
+  - `medium` は xai-sdk 1.17.0 以降が必要（1.8.1 以前は Literal['low','high'] のみで ValueError）
+- 型は `from xai_sdk.types.chat import ReasoningEffort` を使う。
+  `self.reasoning_effort: ReasoningEffort = ...` と明示注釈しないと pyright が `str` に widen してエラーになる
+- インポートは `from xai_sdk.chat import system, user`（`from xai_sdk import chat` にすると
+  click のサブコマンド関数名 `chat` と衝突するため）
 
-共通仕様（litellm使用ツール）:
-- `llm-config` コマンドで設定管理
-- 構造化出力（Pydantic BaseModel + `response_format`）
-- `-p/--provider` と `-m/--model` オプションでモデル選択可能
-
-`translate` と `igrok` は例外で `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環境変数で認証）:
+各ツールの固有仕様:
+- `codegen`: `chat` サブコマンドで自然言語からコード生成、`complete` サブコマンドで `{{ }}` プレースホルダー補完（`-w/--watch` でファイル監視）
+- `zhcomp`: 中国語テキストの簡体字修正、ピンイン出力、日本語翻訳
 - `translate`: 多言語翻訳、自動言語検出、中国語の場合はピンイン付き
-  - `-m/--model`（デフォルト: grok-4.3）と `-r/--reasoning-effort`（none/low/high）のみ指定可能、`-p/--provider` オプションはない
+- `ocr`: `xai_sdk.chat.image(image_url=..., detail="high")` で画像入力（URL または Data URI）。OCRテキスト・内容説明・タグをJSONで出力
+- `aidoc`: Markdown を CSS/JS 込みの HTML ページに変換
 - `igrok`: `client.image.sample()` で画像生成・編集（モデル固定: grok-imagine-image）
   - `-i/--input` 指定時は画像編集モード（Data URI変換して送信）、未指定時は画像生成モード
   - `-o/--output` 必須、`-a/--aspect-ratio`（1:1/3:4/4:3/9:16/16:9、デフォルト1:1、生成時のみ）

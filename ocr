@@ -3,18 +3,17 @@
 import base64
 import json
 import mimetypes
-import subprocess
+import os
 
 import click
-from litellm import completion
 from pydantic import BaseModel, Field
+from xai_sdk import Client
+from xai_sdk.chat import image, user
+from xai_sdk.types.chat import ReasoningEffort
 
-# OCR は OpenAI が高精度
-LLM_CONFIG = json.loads(
-    subprocess.run(
-        ["llm-config", "openai", "gpt-4.1-mini"], capture_output=True
-    ).stdout.decode("utf-8")
-)
+DEFAULT_LLM_MODEL = "grok-4.5"
+DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
+REASONING_EFFORTS = ["low", "medium", "high"]
 
 
 class Output(BaseModel):
@@ -37,8 +36,10 @@ def tobase64(path: str) -> str:
     return f"data:{img_type};base64,{img_b64_str}"
 
 
-# ChatGPT に画像を送信して説明を取得する関数
-def get_image_description(model: str, url: str) -> Output:
+# Grok に画像を送信して説明を取得する関数
+def get_image_description(
+    model: str, reasoning_effort: ReasoningEffort, url: str
+) -> Output:
     prompt = f"""以下の画像の内容を5つの粒度で説明してください
 1. 画像に書かれているテキストをそのまま読む (ocr_text)
 2. 文脈を知らない人向けの見たままの内容説明 (100字以下) (description_minor)
@@ -60,52 +61,39 @@ def get_image_description(model: str, url: str) -> Output:
     "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
 }}
 """
-    response = completion(
-        model=model,
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {"url": url},
-                    },
-                ],
-            }
-        ],
-        response_format=Output,
-    )
-    content: str = response.choices[0].message.content  # type: ignore
-    return Output.model_validate_json(content)
+    client = Client(api_key=os.environ.get("XAI_API_KEY"))
+    session = client.chat.create(model=model, reasoning_effort=reasoning_effort)
+    session.append(user(prompt, image(image_url=url, detail="high")))
+    _, result = session.parse(Output)
+    return result
 
 
 @click.command()
 @click.option(
-    "--provider",
-    "-p",
-    type=click.Choice(["xai", "gemini", "openai", "anthropic"]),
-    default=LLM_CONFIG["provider"],
-    show_default=True,
-)
-@click.option(
     "--model",
     "-m",
     type=str,
-    default=LLM_CONFIG["model"],
+    default=DEFAULT_LLM_MODEL,
     show_default=True,
 )
-@click.argument("image", type=str)
-def main(provider: str, model: str, image: str):
+@click.option(
+    "--reasoning-effort",
+    "-r",
+    type=click.Choice(REASONING_EFFORTS),
+    default=DEFAULT_LLM_REASONING_EFFORT,
+    show_default=True,
+)
+@click.argument("path", type=str)
+def main(model: str, reasoning_effort: ReasoningEffort, path: str):
     """OCR.py
 
-    IMAGE is URL or Path.
+    PATH is URL or Path.
     """
-    if image.startswith("http://") or image.startswith("https://"):
-        image_url = image
+    if path.startswith("http://") or path.startswith("https://"):
+        image_url = path
     else:
-        image_url = tobase64(image)
-    result = get_image_description(f"{provider}/{model}", image_url)
+        image_url = tobase64(path)
+    result = get_image_description(model, reasoning_effort, image_url)
     print(
         json.dumps(
             {

@@ -10,14 +10,18 @@ description: |
 
 ## AI/LLM Tools
 
+LLM 系ツール（codegen/translate/zhcomp/ocr/aidoc/igrok）は xAI の API を直接使う。
+認証は `XAI_API_KEY` 環境変数。モデルは `-m/--model`（既定 grok-4.5）、
+思考量は `-r/--reasoning-effort`（low/medium/high、既定 low）で指定する。
+
 ### codegen
 
-LLMでコード生成・`{{ }}` プレースホルダー補完。xAI/Gemini/OpenAI/Anthropic対応。
+LLMでコード生成・`{{ }}` プレースホルダー補完。
 
 ```bash
 codegen chat "フィボナッチ数列を計算する関数を書いて"
 echo 'def fib(n): {{ implement }}' | codegen complete
-codegen chat -p gemini -m gemini-2.0-flash "..."
+codegen complete -r high -w src/main.rs -o out.rs
 ```
 
 ### translate
@@ -27,7 +31,7 @@ codegen chat -p gemini -m gemini-2.0-flash "..."
 ```bash
 echo "Hello world" | translate
 translate -t ja "How are you?"
-translate -f en -t zh "Hello"
+translate -s en -t zh "Hello"
 ```
 
 ### zhcomp
@@ -51,11 +55,20 @@ echo "中心" | pinyin
 
 ### ocr
 
-画像ファイルからテキストを抽出する。
+画像ファイルからテキストを抽出する。JSON で内容説明とタグも返す。
 
 ```bash
 ocr screenshot.png
-ocr image.jpg
+ocr https://example.com/image.jpg
+```
+
+### aidoc
+
+Markdown を CSS/JS 込みの HTML ページに変換する。
+
+```bash
+aidoc README.md -o README.html
+aidoc doc.md -p "ダークテーマで" -r high
 ```
 
 ### igrok
@@ -334,20 +347,4 @@ jinja2 template.j2 --var key=value
 
 ```bash
 echo "My File.txt" | filename --sanitize
-```
-
-## Configuration
-
-### llm-config
-
-codegen/translate/zhcomp などの AI ツール向け LLM 設定を管理する。
-プロバイダー・モデルを位置引数で指定し、JSON を stdout に出力する。
-
-```bash
-llm-config                          # 環境変数から自動選択
-llm-config xai                      # xAI (grok-4.3, reasoning_effort=low)
-llm-config xai grok-4.3 -r high    # モデル・reasoning effort 指定
-llm-config gemini                   # Google Gemini
-llm-config openai                   # OpenAI
-llm-config anthropic                # Anthropic
 ```

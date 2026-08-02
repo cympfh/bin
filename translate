@@ -6,9 +6,11 @@ import sys
 import click
 from pydantic import BaseModel, Field
 from xai_sdk import Client, chat
+from xai_sdk.types.chat import ReasoningEffort
 
-DEFAULT_LLM_MODEL = "grok-4.3"
-DEFAULT_LLM_REASONING_EFFORT = "none"
+DEFAULT_LLM_MODEL = "grok-4.5"
+DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
+REASONING_EFFORTS = ["low", "medium", "high"]
 
 LANGS = {
     "unknown": "不明 (与えられる文から推測してください)",
@@ -21,7 +23,7 @@ LANGS = {
 
 class Response(BaseModel):
     model: str = Field(description="Model name used for translation")
-    reasoning_effort: str | None = Field(
+    reasoning_effort: str = Field(
         description="Reasoning effort level used for the response"
     )
     detected_source_language: str = Field(
@@ -35,9 +37,9 @@ class Response(BaseModel):
 
 
 class LLM:
-    def __init__(self, model: str, reasoning_effort: str | None = None):
+    def __init__(self, model: str, reasoning_effort: ReasoningEffort):
         self.model = model
-        self.reasoning_effort = reasoning_effort
+        self.reasoning_effort: ReasoningEffort = reasoning_effort
         self.client = Client(api_key=os.environ.get("XAI_API_KEY"))
 
     def run(
@@ -136,7 +138,7 @@ JSON の前後に余計なテキストを出力しないでください.
 @click.option(
     "--reasoning-effort",
     "-r",
-    type=click.Choice(["none", "low", "high"]),
+    type=click.Choice(REASONING_EFFORTS),
     default=DEFAULT_LLM_REASONING_EFFORT,
     show_default=True,
 )
@@ -145,7 +147,7 @@ JSON の前後に余計なテキストを出力しないでください.
 @click.argument("text", type=str, required=False)
 def main(
     model: str,
-    reasoning_effort: str,
+    reasoning_effort: ReasoningEffort,
     source: str,
     target: str,
     text: str,
@@ -156,9 +158,9 @@ def main(
     assert source in LANGS, f"Supported langs: {LANGS}"
     assert target in LANGS, f"Supported langs: {LANGS}"
 
-    effort = None if reasoning_effort == "none" else reasoning_effort
-
-    result = LLM(model, effort).run(text, source_lang=source, target_lang=target)
+    result = LLM(model, reasoning_effort).run(
+        text, source_lang=source, target_lang=target
+    )
     print(result.model_dump_json())
 
 

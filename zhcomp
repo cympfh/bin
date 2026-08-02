@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 
-import json
-import subprocess
+import os
 import sys
 
 import click
-from litellm import completion
 from pydantic import BaseModel, Field
+from xai_sdk import Client
+from xai_sdk.chat import system, user
+from xai_sdk.types.chat import ReasoningEffort
 
-LLM_CONFIG = json.loads(
-    subprocess.run(
-        ["llm-config", "xai", "-r", "low"], capture_output=True
-    ).stdout.decode("utf-8")
-)
+DEFAULT_LLM_MODEL = "grok-4.5"
+DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
+REASONING_EFFORTS = ["low", "medium", "high"]
 
 
 class CompletedResponse(BaseModel):
@@ -23,16 +22,17 @@ class CompletedResponse(BaseModel):
 
 class Response(BaseModel):
     model: str = Field(description="Model name used for translation")
-    reasoning_effort: str | None = Field(
+    reasoning_effort: str = Field(
         description="Reasoning effort level used for the response"
     )
     completed: CompletedResponse
 
 
 class LLM:
-    def __init__(self, provider: str, model: str, reasoning_effort: str | None = None):
-        self.model = f"{provider}/{model}"
-        self.reasoning_effort = reasoning_effort
+    def __init__(self, model: str, reasoning_effort: ReasoningEffort):
+        self.model = model
+        self.reasoning_effort: ReasoningEffort = reasoning_effort
+        self.client = Client(api_key=os.environ.get("XAI_API_KEY"))
 
     def run(self, text: str) -> Response:
         system_prompt = f"""
@@ -89,65 +89,48 @@ JSON の前後に余計なテキストを出力しないでください.
     }}
 }}
 """
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {
-                "role": "user",
-                "content": f"""
+        session = self.client.chat.create(
+            model=self.model,
+            reasoning_effort=self.reasoning_effort,
+        )
+        session.append(system(system_prompt))
+        session.append(
+            user(
+                f"""
 ---
 {text}
 ---
-""",
-            },
-        ]
-        extra = {}
-        if self.reasoning_effort is not None:
-            extra["reasoning_effort"] = self.reasoning_effort
-        result = completion(
-            model=self.model,
-            messages=messages,
-            response_format=Response,
-            **extra,
+"""
+            )
         )
-        content: str = result.choices[0].message.content
-        return Response.model_validate_json(content)
+        _, result = session.parse(Response)
+        return result
 
 
 @click.command()
 @click.option(
-    "--provider",
-    "-p",
-    type=click.Choice(["xai", "gemini", "openai", "anthropic"]),
-    default=LLM_CONFIG["provider"],
-    show_default=True,
-)
-@click.option(
     "--model",
     "-m",
     type=str,
-    default=LLM_CONFIG["model"],
+    default=DEFAULT_LLM_MODEL,
     show_default=True,
 )
 @click.option(
     "--reasoning-effort",
     "-r",
-    type=click.Choice([None, "none", "low", "medium", "high"]),
-    default=LLM_CONFIG.get("reasoning_effort"),
+    type=click.Choice(REASONING_EFFORTS),
+    default=DEFAULT_LLM_REASONING_EFFORT,
     show_default=True,
 )
 @click.argument("text", type=str, required=False)
 def main(
-    provider: str,
     model: str,
-    reasoning_effort: str | None,
+    reasoning_effort: ReasoningEffort,
     text: str,
 ):
     if not text:
         text = sys.stdin.read()
-    result = LLM(provider, model, reasoning_effort).run(text)
+    result = LLM(model, reasoning_effort).run(text)
     print(result.model_dump_json())
 
 
