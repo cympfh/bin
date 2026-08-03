@@ -1,18 +1,20 @@
 #!/bin/bash
 
 # 候補
-browsers() {
-  echo /mnt/c/Users/cympf/AppData/Local/Vivaldi/Application/vivaldi.exe
-  echo /mnt/c/Users/kazuhiro_hattori/AppData/Local/Vivaldi/Application/vivaldi.exe
-}
+browsers=(
+  "/mnt/c/Program Files/Mozilla Firefox/firefox.exe"
+  "/mnt/c/Users/cympf/AppData/Local/Vivaldi/Application/vivaldi.exe"
+  "/mnt/c/Users/kazuhiro_hattori/AppData/Local/Vivaldi/Application/vivaldi.exe"
+)
 
 if [ -z "${BROWSER}" ]; then
-  for b in $(browsers); do
-    if [ -e $b ]; then
+  for b in "${browsers[@]}"; do
+    if [ -e "$b" ]; then
       export BROWSER=$b
       break
     fi
   done
 fi
 
-${BROWSER} $@
+echo "Opening browser: ${BROWSER}" >&2
+"${BROWSER}" "$@"
