@@ -1,0 +1,179 @@
+#!/usr/bin/env python
+
+import hashlib
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import click
+from gtts import gTTS
+from pydantic import BaseModel, Field
+from xai_sdk import Client
+from xai_sdk.chat import system, user
+from xai_sdk.types.chat import ReasoningEffort
+
+DEFAULT_LLM_MODEL = "grok-4.5"
+DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
+REASONING_EFFORTS = ["low", "medium", "high"]
+AUDIO_CACHE_DIR = Path("/tmp/zplay")
+
+
+class Response(BaseModel):
+    ja: str = Field(description="Japanese translation")
+    zh: str = Field(description="Normalized Simplified Chinese text")
+    pinyin: str = Field(description="Pinyin with tone marks")
+
+
+class LLM:
+    def __init__(self, model: str, reasoning_effort: ReasoningEffort):
+        self.model = model
+        self.reasoning_effort: ReasoningEffort = reasoning_effort
+        self.client = Client(api_key=os.environ.get("XAI_API_KEY"))
+
+    def run(self, text: str) -> Response:
+        system_prompt = """
+入力を普通話の正しい簡体字中国語・拼音・日本語に正規化してください.
+入力は日本語・拼音(アルファベット)・中国語のいずれか、または混在です.
+
+正規化ルール:
+
+- 日本語 → 自然な中国語に翻訳する. ja はその日本語（必要なら整える）
+  - 例: "図書館に行く" → zh "去图书馆", ja "図書館に行く"
+- 拼音 → 対応する簡体字に変換し、ja は日本語訳
+  - 例: "ni hao" / "nǐ hǎo" → zh "你好", ja "こんにちは"
+- 中国語 → 正しい簡体字に修正し、ja は日本語訳
+  - 日本漢字は簡体字へ: "図書館" → "图书馆"
+  - 拼音混在は漢字へ: "图shu馆" → "图书馆"
+- 空白は出力の中文から除く (拼音は単語単位で半角スペース区切り)
+- "ta" は文脈で 他/她/它. 入力 "ta1"/"ta2"/"ta3" はそれぞれ 他/她/它
+
+出力ルール (違反すると不正):
+
+- 句読点は半角 ,.!? を使い、入力にある句読点は残す. 勝手に追加・削除しない
+- 中文はトークナイズしない
+- 拼音は単語単位で半角スペース区切り、声調記号付き
+  - 例: "Zhōnghuá Rénmín Gònghéguó"
+- 返すのは JSON 辞書 1 つだけ. { で始まり } で終わる
+- ```json などの余計なテキストは禁止
+
+JSON フォーマット:
+
+{
+    "ja": "${日本語}",
+    "zh": "${正規化された簡体字中国語}",
+    "pinyin": "${対応する拼音}"
+}
+"""
+        session = self.client.chat.create(
+            model=self.model,
+            reasoning_effort=self.reasoning_effort,
+        )
+        session.append(system(system_prompt))
+        session.append(
+            user(
+                f"""
+---
+{text}
+---
+"""
+            )
+        )
+        _, result = session.parse(Response)
+        return result
+
+
+def generate_audio(text: str, slow: bool = False) -> Path:
+    """Generate audio file using gTTS, with caching. (from chilingo/main.py)"""
+    AUDIO_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    # slow の有無でキャッシュを分ける
+    key = f"{text}\0slow={slow}"
+    text_hash = hashlib.md5(key.encode()).hexdigest()
+    audio_path = AUDIO_CACHE_DIR / f"{text_hash}.mp3"
+
+    if audio_path.exists():
+        return audio_path
+
+    tts = gTTS(text, lang="zh-cn", slow=slow)
+    tts.save(str(audio_path))
+    return audio_path
+
+
+def play_audio(path: Path) -> None:
+    """Play audio file with mplayer."""
+    subprocess.run(
+        ["mplayer", "-quiet", str(path)],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+
+
+@click.command()
+@click.option(
+    "--model",
+    "-m",
+    type=str,
+    default=DEFAULT_LLM_MODEL,
+    show_default=True,
+)
+@click.option(
+    "--reasoning-effort",
+    "-r",
+    type=click.Choice(REASONING_EFFORTS),
+    default=DEFAULT_LLM_REASONING_EFFORT,
+    show_default=True,
+)
+@click.option(
+    "--slow",
+    "-s",
+    is_flag=True,
+    default=False,
+    help="gTTS slow speech (for listening practice)",
+)
+@click.option(
+    "--no-play",
+    is_flag=True,
+    default=False,
+    help="Generate audio but do not play with mplayer",
+)
+@click.argument("text", type=str, required=False)
+def main(
+    model: str,
+    reasoning_effort: ReasoningEffort,
+    slow: bool,
+    no_play: bool,
+    text: str | None,
+):
+    """日本語 / 拼音 / 中国語を正規化し、中国語音声を合成・再生する.
+
+    \b
+    EXAMPLES
+        zplay "你好"
+        zplay "ni hao"
+        zplay "図書館に行く"
+        echo "图shu馆" | zplay
+        zplay -s "慢慢说"
+        zplay --no-play "你好"
+    """
+    if not text:
+        text = sys.stdin.read()
+    text = text.strip()
+    if not text:
+        raise click.UsageError("text required (argument or stdin)")
+
+    result = LLM(model, reasoning_effort).run(text)
+    audio_path = generate_audio(result.zh, slow=slow)
+
+    out = result.model_dump()
+    out["audio"] = str(audio_path)
+    print(json.dumps(out, ensure_ascii=False))
+
+    if not no_play:
+        play_audio(audio_path)
+
+
+if __name__ == "__main__":
+    main()

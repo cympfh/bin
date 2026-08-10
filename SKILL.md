@@ -44,6 +44,19 @@ zhcomp --pinyin "你好"
 zhcomp --ja "中文"
 ```
 
+### zplay
+
+日本語 / 拼音 / 中国語を Grok で正規化し、gTTS で音声合成して mplayer 再生。
+
+```bash
+zplay "你好"
+zplay "ni hao"
+zplay "図書館に行く"
+echo "图shu馆" | zplay
+zplay -s "慢慢说"          # ゆっくり再生
+zplay --no-play "你好"     # 正規化+音声生成のみ
+```
+
 ### pinyin
 
 中国語テキストをピンインに変換する。

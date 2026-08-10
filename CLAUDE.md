@@ -47,6 +47,7 @@ ruff check
 
 - `codegen` - LLMによるコード生成・プレースホルダー補完（xai_sdk使用）
 - `zhcomp` - 中国語テキスト修正・ピンイン変換（xai_sdk使用）
+- `zplay` - 日本語/拼音/中国語を正規化し gTTS+mplayer で中国語音声再生（xai_sdk使用）
 - `translate` - 多言語翻訳（xai_sdk使用）
 - `igrok` - Grokによる画像生成・編集（xai_sdk使用、grok-imagine-imageモデル）
 - `codegpt`, `papergpt` - ChatGPT系ツール
