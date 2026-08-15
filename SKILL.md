@@ -11,8 +11,8 @@ description: |
 ## AI/LLM Tools
 
 LLM 系ツール（codegen/translate/zhcomp/ocr/aidoc/igrok）は xAI の API を直接使う。
-認証は `XAI_API_KEY` 環境変数。モデルは `-m/--model`（既定 grok-4.5）、
-思考量は `-r/--reasoning-effort`（low/medium/high、既定 low）で指定する。
+認証は `XAI_API_KEY` 環境変数。モデルは `-m/--model`（既定 grok-4.6）、
+思考量は `-r/--reasoning-effort`（low/medium/high/xhigh、既定 low）で指定する。
 
 ### codegen
 
@@ -95,7 +95,7 @@ igrok '猫に変換' -i dog.png -o cat_edited.png
 
 ### eliza
 
-Claude API を使ったチャット CLI。会話履歴管理とサマリー作成機能付き。
+Eliza サーバへ POST する薄い CLI。`localhost:9096`、落ちてたら `s.cympfh.cc` の IP。
 
 ```bash
 eliza chat "こんにちは、今日の天気は？"

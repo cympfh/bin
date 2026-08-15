@@ -7,9 +7,9 @@ from xai_sdk import Client
 from xai_sdk.chat import system, user
 from xai_sdk.types.chat import ReasoningEffort
 
-DEFAULT_LLM_MODEL = "grok-4.5"
+DEFAULT_LLM_MODEL = "grok-4.6"
 DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
-REASONING_EFFORTS = ["low", "medium", "high"]
+REASONING_EFFORTS = ["low", "medium", "high", "xhigh"]
 
 
 class HTML(BaseModel):

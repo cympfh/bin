@@ -49,10 +49,11 @@ ruff check
 - `zhcomp` - 中国語テキスト修正・ピンイン変換（xai_sdk使用）
 - `zplay` - 日本語/拼音/中国語を正規化し gTTS+mplayer で中国語音声再生（xai_sdk使用）
 - `translate` - 多言語翻訳（xai_sdk使用）
-- `igrok` - Grokによる画像生成・編集（xai_sdk使用、grok-imagine-imageモデル）
+- `igrok` - Grokによる画像生成・編集（xai_sdk使用、grok-imagine-image-2.0モデル）
 - `codegpt`, `papergpt` - ChatGPT系ツール
 - `ocr` - 画像のOCR・内容説明（xai_sdk使用）
 - `aidoc` - Markdown を HTML ページに変換（xai_sdk使用）
+- `eliza` - Eliza サーバへ POST する薄い CLI（LLM クライアントではない）
 
 #### システム・ユーティリティ
 
@@ -123,9 +124,10 @@ LLMツールは全て `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環�
 - `Client(api_key=os.environ.get("XAI_API_KEY"))` でクライアント生成
 - `client.chat.create(model=..., reasoning_effort=...)` → `session.append(system(...)/user(...))` → `session.parse(Model)`
   で構造化出力（Pydantic BaseModel）を得る
-- モジュール定数 `DEFAULT_LLM_MODEL = "grok-4.5"` / `DEFAULT_LLM_REASONING_EFFORT = "low"`
-- オプションは `-m/--model` と `-r/--reasoning-effort`（low/medium/high）。`-p/--provider` は存在しない
-  - grok-4.5 は reasoning を無効化できない（`none` 不可、API既定は high）
+- モジュール定数 `DEFAULT_LLM_MODEL = "grok-4.6"` / `DEFAULT_LLM_REASONING_EFFORT = "low"`
+- オプションは `-m/--model` と `-r/--reasoning-effort`（low/medium/high/xhigh）。`-p/--provider` は存在しない
+  - grok-4.6 は reasoning を無効化できない（`none` 不可、API既定は high）
+  - `xhigh` は grok-4.6 以降。xai-sdk 1.18.0 以降が必要
   - `medium` は xai-sdk 1.17.0 以降が必要（1.8.1 以前は Literal['low','high'] のみで ValueError）
 - 型は `from xai_sdk.types.chat import ReasoningEffort` を使う。
   `self.reasoning_effort: ReasoningEffort = ...` と明示注釈しないと pyright が `str` に widen してエラーになる
@@ -138,10 +140,16 @@ LLMツールは全て `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環�
 - `translate`: 多言語翻訳、自動言語検出、中国語の場合はピンイン付き
 - `ocr`: `xai_sdk.chat.image(image_url=..., detail="high")` で画像入力（URL または Data URI）。OCRテキスト・内容説明・タグをJSONで出力
 - `aidoc`: Markdown を CSS/JS 込みの HTML ページに変換
-- `igrok`: `client.image.sample()` で画像生成・編集（モデル固定: grok-imagine-image）
+- `igrok`: `client.image.sample()` で画像生成・編集（モデル固定: grok-imagine-image-2.0）
   - `-i/--input` 指定時は画像編集モード（Data URI変換して送信）、未指定時は画像生成モード
-  - `-o/--output` 必須、`-a/--aspect-ratio`（1:1/3:4/4:3/9:16/16:9、デフォルト1:1、生成時のみ）
+  - `-o/--output` 必須
+  - `-a/--aspect-ratio`（1:1/16:9/9:16/4:3/3:4/3:2/2:3/2:1/1:2/19.5:9/9:19.5/20:9/9:20/auto、デフォルト1:1、生成時のみ。auto は未指定）
+  - `-r/--resolution`（1k/2k、デフォルト1k）
   - レスポンスの画像URLをダウンロードして保存
+- `eliza`: LLM/xai_sdk は使わない。`http://{host}:9096/eliza/api/{chat,summary}` へ POST するだけ
+  - host は `localhost`、`/eliza/api/health` が落ちてたら `s.cympfh.cc` の IP
+  - `chat` は `{"context":"cli","max_loop":5,"messages":[...]}` を送る
+  - 未知サブコマンドは `chat` にフォールバック
 
 ## 使用方法
 
