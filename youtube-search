@@ -1,0 +1,3 @@
+#!/bin/bash
+# Thin wrapper around `youtube search`
+exec "$(dirname "$0")/youtube" search "$@"

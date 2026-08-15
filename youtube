@@ -1,0 +1,678 @@
+#!/usr/bin/env python3
+"""YouTube Data API v3 CLI — search / playlists / OAuth."""
+
+from __future__ import annotations
+
+import json
+import os
+import re
+import sys
+import threading
+import time
+import webbrowser
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qs, urlencode, urlparse
+
+import click
+import requests
+
+API_BASE = "https://www.googleapis.com/youtube/v3"
+OAUTH_AUTH = "https://accounts.google.com/o/oauth2/v2/auth"
+OAUTH_TOKEN = "https://oauth2.googleapis.com/token"
+SCOPES = "https://www.googleapis.com/auth/youtube"
+CONFIG_DIR = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "youtube"
+CLIENT_PATH = CONFIG_DIR / "client.json"
+TOKEN_PATH = CONFIG_DIR / "token.json"
+DEFAULT_REDIRECT_PORT = 8765
+
+
+# ---------------------------------------------------------------------------
+# Config / token
+# ---------------------------------------------------------------------------
+
+
+def _ensure_config_dir() -> None:
+    CONFIG_DIR.mkdir(parents=True, mode=0o700, exist_ok=True)
+
+
+def load_client() -> dict[str, str]:
+    """Load OAuth client_id/secret from env or ~/.config/youtube/client.json."""
+    cid = os.environ.get("YOUTUBE_CLIENT_ID", "").strip()
+    secret = os.environ.get("YOUTUBE_CLIENT_SECRET", "").strip()
+    if cid and secret:
+        return {"client_id": cid, "client_secret": secret}
+
+    if CLIENT_PATH.exists():
+        data = json.loads(CLIENT_PATH.read_text())
+        # Google Cloud のダウンロード JSON 形式にも対応
+        if "installed" in data:
+            data = data["installed"]
+        elif "web" in data:
+            data = data["web"]
+        cid = data.get("client_id", "")
+        secret = data.get("client_secret", "")
+        if cid and secret:
+            return {"client_id": cid, "client_secret": secret}
+
+    raise click.ClickException(
+        "OAuth クライアント未設定。\n"
+        f"  1. Google Cloud Console で OAuth クライアント (デスクトップ) を作成\n"
+        f"  2. client_secret JSON を {CLIENT_PATH} に置く\n"
+        f"     または YOUTUBE_CLIENT_ID / YOUTUBE_CLIENT_SECRET を export\n"
+        f"  3. youtube auth を実行\n"
+        f"詳細: youtube auth --help"
+    )
+
+
+def save_client(client_id: str, client_secret: str) -> None:
+    _ensure_config_dir()
+    CLIENT_PATH.write_text(
+        json.dumps(
+            {"client_id": client_id, "client_secret": client_secret},
+            indent=2,
+        )
+        + "\n"
+    )
+    CLIENT_PATH.chmod(0o600)
+
+
+def load_token() -> dict[str, Any] | None:
+    if TOKEN_PATH.exists():
+        return json.loads(TOKEN_PATH.read_text())
+    # env fallback
+    rt = os.environ.get("YOUTUBE_REFRESH_TOKEN", "").strip()
+    if rt:
+        return {"refresh_token": rt}
+    return None
+
+
+def save_token(token: dict[str, Any]) -> None:
+    _ensure_config_dir()
+    existing = load_token() or {}
+    # refresh_token は再発行されないことがあるので保持
+    if "refresh_token" not in token and "refresh_token" in existing:
+        token["refresh_token"] = existing["refresh_token"]
+    token["saved_at"] = int(time.time())
+    TOKEN_PATH.write_text(json.dumps(token, indent=2) + "\n")
+    TOKEN_PATH.chmod(0o600)
+
+
+def api_key() -> str:
+    key = os.environ.get("YOUTUBE_API_KEY", "").strip()
+    if not key:
+        raise click.ClickException("YOUTUBE_API_KEY が未設定")
+    return key
+
+
+# ---------------------------------------------------------------------------
+# OAuth
+# ---------------------------------------------------------------------------
+
+
+def refresh_access_token(token: dict[str, Any]) -> str:
+    client = load_client()
+    rt = token.get("refresh_token")
+    if not rt:
+        raise click.ClickException("refresh_token なし。youtube auth を再実行")
+    r = requests.post(
+        OAUTH_TOKEN,
+        data={
+            "client_id": client["client_id"],
+            "client_secret": client["client_secret"],
+            "refresh_token": rt,
+            "grant_type": "refresh_token",
+        },
+        timeout=30,
+    )
+    if not r.ok:
+        raise click.ClickException(f"token refresh 失敗: {r.status_code} {r.text}")
+    data = r.json()
+    token.update(data)
+    token["expires_at"] = int(time.time()) + int(data.get("expires_in", 3600)) - 60
+    save_token(token)
+    return data["access_token"]
+
+
+def get_access_token() -> str:
+    token = load_token()
+    if not token:
+        raise click.ClickException("未認証。先に: youtube auth")
+    if token.get("access_token") and token.get("expires_at", 0) > time.time():
+        return token["access_token"]
+    if token.get("refresh_token"):
+        return refresh_access_token(token)
+    raise click.ClickException("token 期限切れ。youtube auth を再実行")
+
+
+def exchange_code(code: str, redirect_uri: str) -> dict[str, Any]:
+    client = load_client()
+    r = requests.post(
+        OAUTH_TOKEN,
+        data={
+            "client_id": client["client_id"],
+            "client_secret": client["client_secret"],
+            "code": code,
+            "grant_type": "authorization_code",
+            "redirect_uri": redirect_uri,
+        },
+        timeout=30,
+    )
+    if not r.ok:
+        raise click.ClickException(f"code 交換失敗: {r.status_code} {r.text}")
+    data = r.json()
+    data["expires_at"] = int(time.time()) + int(data.get("expires_in", 3600)) - 60
+    return data
+
+
+def open_url(url: str) -> None:
+    """WSL なら open-browser、なければ webbrowser。"""
+    browser = os.environ.get("BROWSER")
+    if not browser:
+        candidates = [
+            Path.home() / "bin" / "open-browser",
+            Path("/home/cympfh/bin/open-browser"),
+        ]
+        for c in candidates:
+            if c.is_file() and os.access(c, os.X_OK):
+                browser = str(c)
+                break
+    if browser:
+        os.spawnlp(os.P_NOWAIT, browser, browser, url)
+    else:
+        webbrowser.open(url)
+
+
+def _parse_oauth_redirect(text: str) -> tuple[str | None, str | None]:
+    """redirect URL / query / 生 code から (code, error) を取る。"""
+    text = text.strip().strip('"').strip("'")
+    if not text:
+        return None, None
+    if re.fullmatch(r"[\w./_-]+", text) and "://" not in text and "=" not in text:
+        return text, None
+    if "://" not in text and "?" not in text and "code=" in text:
+        text = "http://x/?" + text
+    elif "://" not in text and text.startswith("code="):
+        text = "http://x/?" + text
+    if "://" in text or text.startswith("/"):
+        qs = parse_qs(urlparse(text).query)
+    else:
+        qs = parse_qs(text)
+    code = (qs.get("code") or [None])[0]
+    err = (qs.get("error") or [None])[0]
+    return code, err
+
+
+def run_oauth_flow(port: int = DEFAULT_REDIRECT_PORT) -> dict[str, Any]:
+    client = load_client()
+    # Desktop クライアントの既定は http://localhost（port 可変）
+    # ※ redirect_uri は Google に登録された値と一致必須。listen 先とは別。
+    redirect_uri = f"http://localhost:{port}/"
+    params = {
+        "client_id": client["client_id"],
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": SCOPES,
+        "access_type": "offline",
+        "prompt": "consent",  # refresh_token を確実に取る
+    }
+    auth_url = f"{OAUTH_AUTH}?{urlencode(params)}"
+
+    result: dict[str, Any] = {"code": None, "error": None}
+    event = threading.Event()
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            parsed = urlparse(self.path)
+            # favicon 等は無視（event を立てない）
+            if parsed.path not in ("/", "") and "code" not in parsed.query and "error" not in parsed.query:
+                self.send_response(404)
+                self.end_headers()
+                return
+            qs = parse_qs(parsed.query)
+            if "code" in qs:
+                result["code"] = qs["code"][0]
+                body = (
+                    b"<!doctype html><meta charset=utf-8>"
+                    b"<h1>OK</h1><p>YouTube auth done. Close this tab.</p>"
+                )
+                self.send_response(200)
+            elif "error" in qs:
+                result["error"] = qs["error"][0]
+                body = f"<!doctype html><meta charset=utf-8><h1>Error</h1><p>{result['error']}</p>".encode()
+                self.send_response(400)
+            else:
+                body = b"<!doctype html><meta charset=utf-8><h1>youtube auth</h1><p>waiting for OAuth redirect...</p>"
+                self.send_response(200)
+                self.send_header("Content-Type", "text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                click.echo(f"[oauth] hit {self.path!r} (code なし)", err=True)
+                return
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            click.echo(f"[oauth] captured from {self.client_address[0]} path={self.path[:80]!r}", err=True)
+            event.set()
+
+        def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
+            # アクセスログを stderr に出す（WSL 到達確認用）
+            sys.stderr.write("[oauth] %s - %s\n" % (self.address_string(), format % args))
+
+    # WSL2: Windows ブラウザの localhost 転送は 0.0.0.0 listen の方が届きやすい
+    try:
+        server = HTTPServer(("0.0.0.0", port), Handler)
+    except OSError as e:
+        raise click.ClickException(f"port {port} を bind できない: {e}") from e
+
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    click.echo(f"[oauth] listening 0.0.0.0:{port}  (redirect_uri={redirect_uri})", err=True)
+    click.echo(f"ブラウザで Google にログインして許可:\n  {auth_url}\n")
+    click.echo(
+        "空白ページ / 接続失敗のとき:\n"
+        "  1. アドレスバーの URL 全体をコピー\n"
+        "  2. この端末に貼り付けて Enter\n"
+        "     (http://localhost:8765/?code=... の形)\n"
+    )
+    open_url(auth_url)
+
+    # ブラウザ redirect と stdin 貼り付けの両方を待つ
+    paste: dict[str, str | None] = {"code": None, "error": None}
+
+    def _stdin_watcher() -> None:
+        try:
+            line = sys.stdin.readline()
+        except Exception:
+            return
+        if not line:
+            return
+        code, err = _parse_oauth_redirect(line)
+        paste["code"] = code
+        paste["error"] = err
+        event.set()
+
+    if sys.stdin.isatty():
+        threading.Thread(target=_stdin_watcher, daemon=True).start()
+
+    if not event.wait(timeout=300):
+        server.shutdown()
+        raise click.ClickException("タイムアウト (300s)。再実行するか URL を貼るか --code を使う")
+
+    server.shutdown()
+
+    code = result["code"] or paste["code"]
+    err = result["error"] or paste["error"]
+    if err and not code:
+        raise click.ClickException(f"認可エラー: {err}")
+    if not code:
+        raise click.ClickException("code が取れなかった")
+
+    return exchange_code(code, redirect_uri)
+
+
+# ---------------------------------------------------------------------------
+# API helpers
+# ---------------------------------------------------------------------------
+
+
+def api(
+    method: str,
+    path: str,
+    *,
+    params: dict[str, Any] | None = None,
+    body: dict[str, Any] | None = None,
+    auth: bool = True,
+    use_key: bool = False,
+) -> dict[str, Any]:
+    params = dict(params or {})
+    headers: dict[str, str] = {}
+    if auth:
+        headers["Authorization"] = f"Bearer {get_access_token()}"
+    if use_key or not auth:
+        params.setdefault("key", api_key())
+    url = f"{API_BASE}/{path.lstrip('/')}"
+    r = requests.request(method, url, params=params, json=body, headers=headers, timeout=30)
+    if not r.ok:
+        try:
+            err = r.json()
+        except Exception:
+            err = r.text
+        raise click.ClickException(f"API {method} {path} → {r.status_code}: {err}")
+    if r.status_code == 204 or not r.content:
+        return {}
+    return r.json()
+
+
+def extract_video_id(s: str) -> str:
+    """URL または生 ID から videoId を抽出。"""
+    s = s.strip()
+    if re.fullmatch(r"[\w-]{11}", s):
+        return s
+    m = re.search(r"(?:v=|/shorts/|/embed/|youtu\.be/)([\w-]{11})", s)
+    if m:
+        return m.group(1)
+    raise click.ClickException(f"video id を解釈できない: {s}")
+
+
+def extract_playlist_id(s: str) -> str:
+    s = s.strip()
+    if s.startswith("PL") or s.startswith("UU") or s.startswith("LL") or s.startswith("FL"):
+        return s
+    m = re.search(r"[?&]list=([\w-]+)", s)
+    if m:
+        return m.group(1)
+    # 生 ID も許容
+    if re.fullmatch(r"[\w-]+", s):
+        return s
+    raise click.ClickException(f"playlist id を解釈できない: {s}")
+
+
+def out(data: Any, as_json: bool) -> None:
+    if as_json:
+        click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+    else:
+        if isinstance(data, str):
+            click.echo(data)
+        else:
+            click.echo(json.dumps(data, ensure_ascii=False, indent=2))
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+
+@click.group()
+def main() -> None:
+    """YouTube 操作 (検索 / プレイリスト / OAuth)。"""
+
+
+@main.command("auth")
+@click.option("--port", default=DEFAULT_REDIRECT_PORT, show_default=True, help="redirect 用ローカル port")
+@click.option("--code", "manual_code", default=None, help="手動で得た authorization code")
+@click.option("--client-id", default=None, help="client_id を保存してから auth")
+@click.option("--client-secret", default=None, help="client_secret を保存してから auth")
+@click.option("--from-json", "from_json", type=click.Path(exists=True), help="Google の client_secret JSON を取り込む")
+def auth_cmd(
+    port: int,
+    manual_code: str | None,
+    client_id: str | None,
+    client_secret: str | None,
+    from_json: str | None,
+) -> None:
+    """OAuth で YouTube アカウントを認可し token を保存する。
+
+    \b
+    初回セットアップ:
+      1. https://console.cloud.google.com/ でプロジェクト選択
+      2. API とサービス → ライブラリ → YouTube Data API v3 を有効化
+      3. OAuth 同意画面 (外部 / テストユーザーに自分を追加)
+      4. 認証情報 → OAuth クライアント ID → デスクトップアプリ 作成
+      5. JSON ダウンロード → youtube auth --from-json ~/Downloads/client_secret_*.json
+      6. ブラウザで許可
+
+    \b
+    redirect URI (コンソールに追加が必要な場合):
+      http://localhost:8765/
+    """
+    if from_json:
+        raw = json.loads(Path(from_json).read_text())
+        data = raw.get("installed") or raw.get("web") or raw
+        client_id = data["client_id"]
+        client_secret = data["client_secret"]
+        click.echo(f"imported client_id={client_id[:20]}...")
+
+    if client_id and client_secret:
+        save_client(client_id, client_secret)
+        click.echo(f"saved → {CLIENT_PATH}")
+
+    # 存在確認
+    load_client()
+
+    redirect_uri = f"http://localhost:{port}/"
+    if manual_code:
+        code, err = _parse_oauth_redirect(manual_code)
+        if err and not code:
+            raise click.ClickException(f"認可エラー: {err}")
+        if not code:
+            raise click.ClickException("--code から authorization code を解釈できない")
+        token = exchange_code(code, redirect_uri)
+    else:
+        token = run_oauth_flow(port=port)
+
+    save_token(token)
+    click.echo(f"token saved → {TOKEN_PATH}")
+    # 動作確認
+    me = api("GET", "channels", params={"part": "snippet", "mine": "true"})
+    items = me.get("items") or []
+    if items:
+        title = items[0]["snippet"]["title"]
+        ch_id = items[0]["id"]
+        click.echo(f"OK as: {title} ({ch_id})")
+    else:
+        click.echo("token OK (channel 情報なし)")
+
+
+@main.command("status")
+def status_cmd() -> None:
+    """認証・設定の状態を表示。"""
+    click.echo(f"config_dir: {CONFIG_DIR}")
+    click.echo(f"client: {'yes' if CLIENT_PATH.exists() or (os.environ.get('YOUTUBE_CLIENT_ID') and os.environ.get('YOUTUBE_CLIENT_SECRET')) else 'no'}")
+    click.echo(f"api_key: {'yes' if os.environ.get('YOUTUBE_API_KEY') else 'no'}")
+    token = load_token()
+    if not token:
+        click.echo("token: no")
+        return
+    click.echo(f"token: yes (refresh={'yes' if token.get('refresh_token') else 'no'})")
+    try:
+        me = api("GET", "channels", params={"part": "snippet,statistics", "mine": "true"})
+        items = me.get("items") or []
+        if items:
+            sn = items[0]["snippet"]
+            st = items[0].get("statistics", {})
+            click.echo(f"channel: {sn['title']} ({items[0]['id']})")
+            click.echo(f"subs: {st.get('subscriberCount', '?')}  videos: {st.get('videoCount', '?')}")
+        else:
+            click.echo("channel: (none)")
+    except click.ClickException as e:
+        click.echo(f"auth check failed: {e}")
+
+
+@main.command("search")
+@click.argument("query")
+@click.option("-n", "--max", "max_results", default=5, show_default=True)
+@click.option("--order", default="relevance", show_default=True, type=click.Choice(["relevance", "date", "viewCount", "rating", "title"]))
+@click.option("--type", "result_type", default="video", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def search_cmd(query: str, max_results: int, order: str, result_type: str, as_json: bool) -> None:
+    """動画を検索する (API key)。"""
+    data = api(
+        "GET",
+        "search",
+        params={
+            "part": "snippet",
+            "q": query,
+            "maxResults": max_results,
+            "order": order,
+            "type": result_type,
+        },
+        auth=False,
+        use_key=True,
+    )
+    if as_json:
+        out(data, True)
+        return
+    for i, item in enumerate(data.get("items") or [], 1):
+        sn = item["snippet"]
+        vid = (item.get("id") or {}).get("videoId") or (item.get("id") or {}).get("playlistId") or ""
+        kind = (item.get("id") or {}).get("kind", "").split("#")[-1]
+        click.echo(f"{i}. [{kind}] {sn['title']}")
+        click.echo(f"   {sn['channelTitle']}  {sn.get('publishedAt', '')[:10]}")
+        if vid:
+            url = f"https://www.youtube.com/watch?v={vid}" if kind == "video" else f"https://www.youtube.com/playlist?list={vid}"
+            click.echo(f"   {url}")
+            click.echo(f"   id={vid}")
+
+
+@main.group("playlist")
+def playlist_group() -> None:
+    """プレイリスト操作 (OAuth 必須)。"""
+
+
+@playlist_group.command("list")
+@click.option("-n", "--max", "max_results", default=25, show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def playlist_list(max_results: int, as_json: bool) -> None:
+    """自分のプレイリスト一覧。"""
+    data = api(
+        "GET",
+        "playlists",
+        params={"part": "snippet,contentDetails,status", "mine": "true", "maxResults": max_results},
+    )
+    if as_json:
+        out(data, True)
+        return
+    items = data.get("items") or []
+    if not items:
+        click.echo("(empty)")
+        return
+    for p in items:
+        sn = p["snippet"]
+        n = p.get("contentDetails", {}).get("itemCount", "?")
+        priv = p.get("status", {}).get("privacyStatus", "?")
+        click.echo(f"{p['id']}  [{priv}] ({n})  {sn['title']}")
+        click.echo(f"  https://www.youtube.com/playlist?list={p['id']}")
+
+
+@playlist_group.command("create")
+@click.argument("title")
+@click.option("--desc", "description", default="", help="説明")
+@click.option(
+    "--privacy",
+    default="private",
+    show_default=True,
+    type=click.Choice(["private", "unlisted", "public"]),
+)
+@click.option("--json", "as_json", is_flag=True)
+def playlist_create(title: str, description: str, privacy: str, as_json: bool) -> None:
+    """プレイリストを新規作成。"""
+    data = api(
+        "POST",
+        "playlists",
+        params={"part": "snippet,status"},
+        body={
+            "snippet": {"title": title, "description": description},
+            "status": {"privacyStatus": privacy},
+        },
+    )
+    if as_json:
+        out(data, True)
+        return
+    pid = data["id"]
+    click.echo(f"created: {data['snippet']['title']}")
+    click.echo(f"id: {pid}")
+    click.echo(f"url: https://www.youtube.com/playlist?list={pid}")
+    click.echo(f"privacy: {data['status']['privacyStatus']}")
+
+
+@playlist_group.command("add")
+@click.argument("playlist")
+@click.argument("videos", nargs=-1, required=True)
+@click.option("--json", "as_json", is_flag=True)
+def playlist_add(playlist: str, videos: tuple[str, ...], as_json: bool) -> None:
+    """プレイリストに動画を追加。VIDEO は id または URL。"""
+    pid = extract_playlist_id(playlist)
+    results = []
+    for v in videos:
+        vid = extract_video_id(v)
+        data = api(
+            "POST",
+            "playlistItems",
+            params={"part": "snippet"},
+            body={
+                "snippet": {
+                    "playlistId": pid,
+                    "resourceId": {"kind": "youtube#video", "videoId": vid},
+                }
+            },
+        )
+        results.append(data)
+        if not as_json:
+            title = data.get("snippet", {}).get("title", vid)
+            click.echo(f"+ {vid}  {title}")
+    if as_json:
+        out(results, True)
+
+
+@playlist_group.command("items")
+@click.argument("playlist")
+@click.option("-n", "--max", "max_results", default=50, show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def playlist_items(playlist: str, max_results: int, as_json: bool) -> None:
+    """プレイリスト内の動画一覧。"""
+    pid = extract_playlist_id(playlist)
+    data = api(
+        "GET",
+        "playlistItems",
+        params={
+            "part": "snippet,contentDetails",
+            "playlistId": pid,
+            "maxResults": max_results,
+        },
+    )
+    if as_json:
+        out(data, True)
+        return
+    for i, item in enumerate(data.get("items") or [], 1):
+        sn = item["snippet"]
+        vid = sn.get("resourceId", {}).get("videoId") or item.get("contentDetails", {}).get("videoId", "")
+        click.echo(f"{i}. {sn['title']}")
+        click.echo(f"   {vid}  item={item['id']}")
+
+
+@playlist_group.command("remove-item")
+@click.argument("playlist_item_id")
+def playlist_remove_item(playlist_item_id: str) -> None:
+    """プレイリストから1件削除 (playlistItems.id)。"""
+    api("DELETE", "playlistItems", params={"id": playlist_item_id})
+    click.echo(f"removed item {playlist_item_id}")
+
+
+@playlist_group.command("delete")
+@click.argument("playlist")
+@click.option("--yes", is_flag=True, help="確認なしで削除")
+def playlist_delete(playlist: str, yes: bool) -> None:
+    """プレイリスト自体を削除。"""
+    pid = extract_playlist_id(playlist)
+    if not yes:
+        click.confirm(f"delete playlist {pid} ?", abort=True)
+    api("DELETE", "playlists", params={"id": pid})
+    click.echo(f"deleted {pid}")
+
+
+@main.command("me")
+@click.option("--json", "as_json", is_flag=True)
+def me_cmd(as_json: bool) -> None:
+    """自分のチャンネル情報。"""
+    data = api("GET", "channels", params={"part": "snippet,statistics,contentDetails", "mine": "true"})
+    if as_json:
+        out(data, True)
+        return
+    items = data.get("items") or []
+    if not items:
+        click.echo("(no channel)")
+        return
+    ch = items[0]
+    sn = ch["snippet"]
+    st = ch.get("statistics", {})
+    click.echo(f"{sn['title']}  ({ch['id']})")
+    click.echo(f"https://www.youtube.com/channel/{ch['id']}")
+    click.echo(f"subs={st.get('subscriberCount')} videos={st.get('videoCount')} views={st.get('viewCount')}")
+
+
+if __name__ == "__main__":
+    main()

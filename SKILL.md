@@ -102,15 +102,32 @@ eliza chat "こんにちは、今日の天気は？"
 eliza summary
 ```
 
-### youtube-search
+### youtube / youtube-search
 
-YouTube Data API v3 を使った動画検索（結果を5分キャッシュ）。
+YouTube Data API v3 CLI。検索は API キー、プレイリスト操作は OAuth。
+
+設定:
+- `YOUTUBE_API_KEY` … 検索用
+- `~/.config/youtube/client.json` … OAuth client (or `YOUTUBE_CLIENT_ID` / `YOUTUBE_CLIENT_SECRET`)
+- `~/.config/youtube/token.json` … `youtube auth` で生成
 
 ```bash
-youtube-search "猫 かわいい"
-youtube-search -n 10 --order date "Python tutorial"
-youtube-search --json "keyword"
+# 初回 OAuth
+youtube auth --from-json ~/Downloads/client_secret_*.json
+
+youtube status
+youtube me
+youtube search "猫 かわいい"
+youtube search -n 10 --order date "Python tutorial"
+youtube-search --json "keyword"          # 互換ラッパー
+
+youtube playlist list
+youtube playlist create "マイリスト" --privacy private
+youtube playlist add PLAYLIST_ID VIDEO_ID [VIDEO_URL...]
+youtube playlist items PLAYLIST_ID
+youtube playlist delete PLAYLIST_ID --yes
 ```
+
 
 ## System Utilities
 
