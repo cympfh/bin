@@ -1,0 +1,5 @@
+#!/bin/bash
+exec yt-dlp \
+  --cookies-from-browser 'firefox:/mnt/c/Users/cympf/AppData/Roaming/Mozilla/Firefox/Profiles/ls9r5cqy.default-release' \
+  "$@"
+
