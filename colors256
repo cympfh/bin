@@ -1,7 +1,40 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-printf "\e[1mBOLD\e[0m \e[2mTHIN\e[0m \e[3mITLC\e[0m \e[4mULNE\e[0m\n"
-# ruby -e "$(curl -fsSL https://raw.githubusercontent.com/gawin/bash-colors-256/master/colors)"
+cat <<EOM
+Modified from
+https://raw.githubusercontent.com/rcmdnk/escape_sequence/refs/heads/master/bin/colcheck
+EOM
 
-curl -fsSL https://raw.githubusercontent.com/rcmdnk/escape_sequence/refs/heads/master/bin/colcheck |
-  bash
+echo "Ansi colors"
+for i in {40..48};do
+  printf "\e[${i}m  $i \e[m"
+done
+echo
+for i in {100..107};do
+  printf "\e[${i}m $i \e[m"
+done
+echo
+echo
+
+echo "256 colors"
+for i in {0..255}; do
+  printf "\e[48;05;%dm %03d \e[m" "$i" "$i"
+  if [ $((i%16)) -eq 15 ];then
+    echo
+  fi
+done
+echo
+
+echo "24bit true color test"
+for i in {0..76};do
+  r=$((255-(i*255/76)));
+  g=$((i*510/76));
+  b=$((i*255/76));
+  if [ $g -gt 255 ];then
+    g=$((510-g))
+  fi
+  printf "\e[48;2;%d;%d;%dm" $r $g $b
+  printf "\e[38;2;%d;%d;%dm" $((255-r)) $((255-g)) $((255-b))
+  printf " \e[m"
+done
+printf "\n"
