@@ -11,8 +11,8 @@ description: |
 ## AI/LLM Tools
 
 LLM 系ツール（codegen/translate/zhcomp/ocr/aidoc/igrok）は xAI の API を直接使う。
-認証は `XAI_API_KEY` 環境変数。モデルは `-m/--model`（既定 grok-4.6）、
-思考量は `-r/--reasoning-effort`（low/medium/high/xhigh、既定 low）で指定する。
+認証は `XAI_API_KEY` 環境変数。モデルは `-m/--model`（既定 grok-4.7）、
+思考量は `-r/--reasoning-effort`（low/medium/high/xhigh）で指定する。既定は low。`codegen` だけ medium。
 
 ### codegen
 
