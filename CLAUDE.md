@@ -125,7 +125,7 @@ LLMツールは全て `xai_sdk` を直接使用（xAI専用、`XAI_API_KEY` 環�
 - `client.chat.create(model=..., reasoning_effort=...)` → `session.append(system(...)/user(...))` → `session.parse(Model)`
   で構造化出力（Pydantic BaseModel）を得る
 - モジュール定数 `DEFAULT_LLM_MODEL = "grok-4.7"` / `DEFAULT_LLM_REASONING_EFFORT = "low"`
-  - `codegen` だけ既定は `"medium"`。公式の用途分け（low=単純・低遅延、medium=複雑解析）に合わせたまま
+  - `codegen` と `aidoc` の既定は `"medium"`。公式の用途分け（low=単純・低遅延、medium=複雑解析・構造生成）に合わせる
 - オプションは `-m/--model` と `-r/--reasoning-effort`（low/medium/high/xhigh）。`-p/--provider` は存在しない
   - grok-4.7 は reasoning を無効化できない（`none` 不可、API既定は high）。対応集合は grok-4.6 と同じ
   - `xhigh` は grok-4.6 以降。xai-sdk 1.18.0 以降が必要

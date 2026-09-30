@@ -8,7 +8,7 @@ from xai_sdk.chat import system, user
 from xai_sdk.types.chat import ReasoningEffort
 
 DEFAULT_LLM_MODEL = "grok-4.7"
-DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "low"
+DEFAULT_LLM_REASONING_EFFORT: ReasoningEffort = "medium"
 REASONING_EFFORTS = ["low", "medium", "high", "xhigh"]
 
 

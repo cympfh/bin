@@ -32,7 +32,7 @@ description: |
 | `eliza` | Eliza サーバーの `chat` / `summary` API を呼び出す。通常は `localhost:9096`、停止時は外部ホストを探す。 |
 
 `codegen`、`translate`、`zhcomp`、`ocr`、`aidoc`、`zplay` は `XAI_API_KEY` を
-使います。既定モデルは `grok-4.7` で、推論量の既定値は `codegen` が `medium`、
+使います。既定モデルは `grok-4.7` で、推論量の既定値は `codegen` と `aidoc` が `medium`、
 それ以外のチャット系ツールが `low` です。`igrok` は画像 API の固定モデルを使います。
 
 ```bash
